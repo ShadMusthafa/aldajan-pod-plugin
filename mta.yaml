@@ -1,0 +1,26 @@
+_schema-version: '3.2'
+ID: AKDEVPluginsMTA
+version: 0.0.1
+modules:
+ - name: arun-podplugins
+   type: html5
+   path: podplugins
+   parameters:
+      disk-quota: 256M
+      memory: 100M
+   properties:
+        httpHeaders:
+        - X-Frame-Options: deny
+        CORS: "[{\"uriPattern\": \"^/podplugins/(.*)$\",\"allowedOrigin\": [
+               {\"host\": \"daajan-dmc-test-gpjlw2wc.execution.eu20-quality.web.dmc.cloud.sap\",\"protocol\": \"https\"},
+               {\"host\": \"<DMC_HOST2>\",\"protocol\": \"https\"}],
+               \"allowedMethods\": [\"GET\",\"OPTIONS\"],
+               \"allowedHeaders\":[\"Origin\", \"Accept\",\"X-Requested-With\",\"Content-Type\",
+                     \"Access-Control-Request-Method\",\"Access-Control-Request-Headers\",\"Authorization\",
+                     \"X-Sap-Cid\",\"X-Csrf-Token\",\"x-dme-plant\",\"x-dme-industry-type\",\"x-features\"],
+               \"exposeHeaders\": [\"Accept\",\"Authorization\",\"X-Requested-With\",\"X-Sap-Cid\",
+                     \"Access-Control-Allow-Origin\",\"Access-Control-Allow-Credentials\",\"X-Csrf-Token\",
+                     \"Content-Type\",\"x-dme-plant\",\"x-dme-industry-type\",\"x-features\"]}]"
+   build-parameters:
+    supported-platforms: [CF]
+

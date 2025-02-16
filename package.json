@@ -1,0 +1,12 @@
+{
+  "name": "akdev-pod-plugins",
+  "version": "1.0.0",
+  "description": "Stellium POD Plugins",
+  "main": "podplugins",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "mbt build && cf deploy ./mta_archives/createpackingpluginPluginsMTA_0.0.1.mtar"
+  },
+  "author": "gopi.arun@stellium.com",
+  "license": "ISC"
+}

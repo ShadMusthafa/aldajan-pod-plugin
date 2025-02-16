@@ -1,0 +1,14 @@
+{
+  "components": [
+    {
+      "id": "chartrealplugin",
+      "type": "VIEW_PLUGIN",
+      "allowMultipleInstances": false,
+      "name": "arun.ext.podplugins.chartrealPlugin",
+      "propertyEditor": "arun.ext.podplugins.chartrealPlugin.builder.PropertyEditor",
+      "i18n": "arun.ext.podplugins.chartrealPlugin.i18n.i18n",
+      "productionProcessEnabled": false,
+      "supportedPodTypes": ["WORK_CENTER", "OPERATION", "ORDER", "OTHER", "MONITOR"]
+    }
+  ]
+}
