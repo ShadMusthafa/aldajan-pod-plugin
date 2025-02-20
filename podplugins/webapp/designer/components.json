@@ -19,6 +19,16 @@
       "i18n": "arun.ext.podplugins.massOperatorAssignmentPlugin.i18n.i18n",
       "productionProcessEnabled": false,
       "supportedPodTypes": ["WORK_CENTER", "OPERATION", "ORDER", "OTHER", "MONITOR"]
+    },
+    {
+      "id": "massOperatorAssignmentPluginBomVariance",
+      "type": "VIEW_PLUGIN",
+      "allowMultipleInstances": false,
+      "name": "arun.ext.podplugins.massOperatorAssignmentPluginV2",
+      "propertyEditor": "arun.ext.podplugins.massOperatorAssignmentPluginV2.builder.PropertyEditor",
+      "i18n": "arun.ext.podplugins.massOperatorAssignmentPluginV2.i18n.i18n",
+      "productionProcessEnabled": false,
+      "supportedPodTypes": ["WORK_CENTER", "OPERATION", "ORDER", "OTHER", "MONITOR"]
     }
   ]
 }
