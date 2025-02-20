@@ -9,6 +9,16 @@
       "i18n": "arun.ext.podplugins.chartrealPlugin.i18n.i18n",
       "productionProcessEnabled": false,
       "supportedPodTypes": ["WORK_CENTER", "OPERATION", "ORDER", "OTHER", "MONITOR"]
+    },
+    {
+      "id": "massOperatorAssignmentPlugin",
+      "type": "VIEW_PLUGIN",
+      "allowMultipleInstances": false,
+      "name": "arun.ext.podplugins.massOperatorAssignmentPlugin",
+      "propertyEditor": "arun.ext.podplugins.massOperatorAssignmentPlugin.builder.PropertyEditor",
+      "i18n": "arun.ext.podplugins.massOperatorAssignmentPlugin.i18n.i18n",
+      "productionProcessEnabled": false,
+      "supportedPodTypes": ["WORK_CENTER", "OPERATION", "ORDER", "OTHER", "MONITOR"]
     }
   ]
 }
