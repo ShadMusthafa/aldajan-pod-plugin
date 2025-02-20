@@ -156,6 +156,11 @@
                     path:'viewModel>/lineItems',
                     sorter: [
                         {
+                            path: 'isBomRelevant',
+                            descending: true,
+                            group: true
+                        },
+                        {
                             path: 'workCenter',
                             descending: false
                         },
@@ -166,8 +171,13 @@
                         {
                             path: 'componentDesc',
                             descending: false
+                        },
+                        {
+                            path: 'InSeatNumber',
+                            descending: false
                         }
-                    ]
+                    ],
+                    groupHeaderFactory: '.getGroupHeader'
                 }"
             >
                 
@@ -238,7 +248,7 @@
                             showSecondaryValues="true"
                             columnRatio="2:3"
                             enabled="{
-                                parts:['viewModel>isNew', 'viewModel>isUnitValid'],
+                                parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
                                 formatter: '.formatRowEditable'
                             }"
                             items="{viewModel>resourceList}"
@@ -259,7 +269,7 @@
                             showSuggestion="true"
                             suggestionItems="{viewModel>userAssignments}"
                            enabled="{
-                                parts:['viewModel>isNew', 'viewModel>isUnitValid'],
+                                parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
                                 formatter: '.formatRowEditable'
                             }"
                             value="{viewModel>operator}"
@@ -275,7 +285,7 @@
                         <SegmentedButton
                             selectionChange=".onAutoAcceptanceModeChange"
                             enabled="{
-                                parts:['viewModel>isNew', 'viewModel>isUnitValid'],
+                                parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
                                 formatter: '.formatRowEditable'
                             }"
                             selectedKey="{
@@ -296,7 +306,7 @@
                         </SegmentedButton>
                         <Input
                             enabled="{
-                                parts:['viewModel>isNew', 'viewModel>isUnitValid'],
+                                parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
                                 formatter: '.formatRowEditable'
                             }"
                             value="{
@@ -309,7 +319,7 @@
                         />
                         <Input
                             enabled="{
-                                parts:['viewModel>isNew', 'viewModel>isUnitValid'],
+                                parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
                                 formatter: '.formatRowEditable'
                             }"
                             value="{
@@ -331,31 +341,28 @@
                                 text="Add"
                                 press=".onAddResouceBtnPress"
                                 enabled="{
-                                    parts:['viewModel>isUnitValid'],
-                                    formatter: '.formatRowEditable1'
+                                    parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
+                                    formatter: '.formatRowEditable'
                                 }"
                             />
-                            <ToolbarSpacer width="2px" />
                             <Button
                                 text="Clear"
                                 press=".onClearResourceBtnPress"
                                 enabled="{
-                                    parts:['viewModel>isNew', 'viewModel>isUnitValid'],
+                                    parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
                                     formatter: '.formatRowEditable'
                                 }"
                             />
-                            <ToolbarSpacer width="2px" />
                             <Button
                                 icon="sap-icon://delete"
                                 press=".onDeleteResourceBtnPress"
                                 visible="{= ${viewModel>isNew} === true}"
                                 tooltip="Delete Row"
                                 enabled="{
-                                    parts:['viewModel>isNew', 'viewModel>isUnitValid'],
+                                    parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
                                     formatter: '.formatRowEditable'
                                 }"
                             />
-                            <ToolbarSpacer width="2px" />
                             <!-- <Button
                                 icon="{path:'viewModel>InActive', formatter:'.formatActiveBtn'}"
                                 press=".onPauseBtnPress"
@@ -364,7 +371,14 @@
                                     formatter: '.formatRowEditable1'
                                 }"
                             /> -->
-                            <Switch type="AcceptReject" state="{= ${viewModel>InActive} ? true : false }" change="onActiveStautsBtnPress">
+                            <Switch 
+                                type="AcceptReject" 
+                                state="{= ${viewModel>InActive} ? true : false }" 
+                                enabled="{
+                                    parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
+                                    formatter: '.formatRowEditable'
+                                }"
+                                change="onActiveStautsBtnPress">
                                 <layoutData>
                                     <FlexItemData growFactor="1" />
                                 </layoutData>

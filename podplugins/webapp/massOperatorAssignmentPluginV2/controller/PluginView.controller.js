@@ -628,6 +628,20 @@ sap.ui.define(
         }
       },
 
+      getGroupHeader: function(oGroup) {
+        if (oGroup && oGroup.key) {
+          return new sap.m.GroupHeaderListItem({
+            title: 'BOM Relevant',
+            upperCase: true
+          });
+        } else {
+          return new sap.m.GroupHeaderListItem({
+            title: 'Not BOM Relevant',
+            upperCase: true
+          });
+        }
+      },
+
       _resetModels: function() {
         var oViewModel = this.getView().getModel('viewModel'),
           oOrderDataModel = this.getView().getModel('orderData'),
@@ -775,8 +789,6 @@ sap.ui.define(
         });
 
         var oRoutingDataPromise = this._getOrderRoutingData(this.selectedOrder.order);
-
-        Promise.all([oResourcePromise, oExistingAsmtPromise, oBomDataPromise, oRoutingDataPromise]);
 
         // this._getOrderRoutingData(this.selectedOrder.order)
         Promise.all([oResourcePromise, oExistingAsmtPromise, oBomDataPromise, oRoutingDataPromise])
@@ -980,33 +992,39 @@ sap.ui.define(
           )
         );
 
+        aRecipeItems = aRecipeItems.map(oItem => {
+          return { ...oItem, WORK_CENTER: oItem.workCenter, COMPONENT: oItem.component };
+        });
+
+        var aLineItems = this._mergeArrayByKeys(aRecipeItems, aExistingAssignments, ['WORK_CENTER', 'COMPONENT']);
+
+        this.getView().getModel('viewModel').setProperty('/lineItems1', aLineItems);
+
+        return aLineItems;
+      },
+
+      _mergeArrayByKeys: function(aRecipeData, aExistingAssignments, aKeys) {
+        var oRecipeMap = new Map();
+
+        function getKey(obj) {
+          return aKeys.map(key => obj[key]).join('|');
+        }
+
         var aLineItems = [];
+        aRecipeData.forEach(oRecipe => oRecipeMap.set(getKey(oRecipe), { ...oRecipe }));
+        aExistingAssignments.forEach(oAssmt => {
+          var sKey = getKey(oAssmt);
+          var oLineItem;
 
-        aRecipeItems.forEach(oItem => {
-          //If the uom for the component is not in KG or G, dont create a line for the component
-          var oBomItem = this.oBomComponentsMap[oItem.component];
-          if (oBomItem && (oBomItem.unitOfMeasure === 'KG' || oBomItem.unitOfMeasure === 'G')) {
-            return;
-          }
-
-          //Check if the component has any saved assignments
-          var aAssignments = aExistingAssignments.filter(
-            oAssmt => oAssmt.COMPONENT === oItem.component && oAssmt.WORK_CENTER === oItem.workCenter
-          );
-
-          //In case there are no existing assignments
-          if (aAssignments.length === 0) {
-            oItem.isNew = true;
-            aLineItems.push(oItem);
-            return;
-          }
-
-          //Create line item per existing assignment for the table
-          aAssignments.forEach(oAssmt => {
-            var oLineItem = {
+          if (oRecipeMap.has(sKey)) {
+            //Matched with existing resource
+            var oItem = oRecipeMap.get(sKey);
+            oLineItem = {
               ...oItem,
+              isNew: false,
+              isBomRelevant: true,
               resource: oAssmt.RESOURCE,
-              autoAcceptance: true, //
+              autoAcceptance: true,
               acceptanceDelay: oAssmt.ACCEPTANCE_DELAY,
               operator: oAssmt.CORRECTION_TIME,
               correctionTime: oAssmt.asdfasdf,
@@ -1018,22 +1036,43 @@ sap.ui.define(
               resourceLastModifiedAt: '',
               asset: ''
             };
+          } else {
+            //Not matched scenario
+            oLineItem = {
+              isNew: true,
+              isDirty: false,
+              isBomRelevant: false,
+              resource: oAssmt.RESOURCE,
+              autoAcceptance: true,
+              acceptanceDelay: oAssmt.ACCEPTANCE_DELAY,
+              operator: oAssmt.CORRECTION_TIME,
+              correctionTime: oAssmt.asdfasdf,
+              assignmentUpdatedAt: oAssmt.UPDATED_DATE_TIME,
+              lastModified: oAssmt.UPDATED_DATE_TIME,
+              InSeatNumber: oAssmt.SEAT_NUMBER,
+              InActive: oAssmt.ACTIVE,
+              resourceType: '',
+              resourceLastModifiedAt: '',
+              asset: '',
 
-            var oResource = this._getDetailsForResource(oAssmt.RESOURCE);
-            if (oResource) {
-              oLineItem.resourceType = oResource.types;
-              oLineItem.resourceLastModifiedAt = moment(oResource.modifiedDateTime).toDate();
+              component: oAssmt.COMPONENT,
+              componentDesc: '',
+              workCenter: oAssmt.WORK_CENTER,
+              workCenterDesc: '',
+              phaseId: ''
+            };
+          }
+          var oResource = this._getDetailsForResource(oAssmt.RESOURCE);
+          if (oResource) {
+            oLineItem.resourceType = oResource.types;
+            oLineItem.resourceLastModifiedAt = moment(oResource.modifiedDateTime).toDate();
 
-              if (oResource.asset) {
-                oLineItem.asset = oResource.asset.name;
-              }
+            if (oResource.asset) {
+              oLineItem.asset = oResource.asset.name;
             }
-
-            aLineItems.push(oLineItem);
-          });
+          }
+          aLineItems.push(oLineItem);
         });
-
-        this.getView().getModel('viewModel').setProperty('/lineItems1', aLineItems);
 
         return aLineItems;
       },
@@ -1041,6 +1080,7 @@ sap.ui.define(
       _handleMaterialDataFetch: async function(aMaterials) {
         //Create a map from the service response for material details
         this.materialsList = aMaterials.reduce((acc, val) => {
+          if (!val) return acc;
           acc[val.material] = val;
           return acc;
         }, {});
@@ -1048,7 +1088,8 @@ sap.ui.define(
         var aLineItems = this.getView().getModel('viewModel').getProperty('/lineItems1');
 
         for (var oItem of aLineItems) {
-          oItem.componentDesc = this.materialsList[oItem.component].description;
+          var oMaterialDetail = this.materialsList[oItem.component];
+          oItem.componentDesc = oMaterialDetail ? oMaterialDetail.description : '';
           // oItem.isBatchManaged = true;
         }
         this.getView().getModel('viewModel').setProperty('/lineItems', aLineItems);
@@ -1179,8 +1220,8 @@ sap.ui.define(
         return moment(oDate).format('MMM DD, YYYY HH:mm:ss');
       },
 
-      formatRowEditable: function(bIsNew, bIsUnitValid) {
-        return bIsNew && bIsUnitValid;
+      formatRowEditable: function(bIsNew, bIsUnitValid, bIsBomRelevant) {
+        return bIsNew && bIsUnitValid && bIsBomRelevant;
       },
 
       formatRowEditable1: function(bIsUnitValid) {
