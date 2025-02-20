@@ -54,7 +54,7 @@ sap.ui.define(
 
         this.materialsList = {};
         this.workCenters = {};
-        this.getView().setModel(new JSONModel(this.initialViewModelData), 'viewModel');
+        this.getView().setModel(new JSONModel({...this.initialViewModelData}), 'viewModel');
         this.getView().setModel(new JSONModel([]), 'resourceData');
         this.getView().setModel(new JSONModel({}), 'orderData');
         this.getView().setModel(new JSONModel([]), 'recipeData');
@@ -157,7 +157,7 @@ sap.ui.define(
         var oView = this.getView(),
           oViewModel = oView.getModel('viewModel'),
           aLineItems = oViewModel.getProperty('/lineItems'),
-          oOrderModel = oView.getModel(oOrderData),
+          oOrderModel = oView.getModel('orderData'),
           oOrderData = oOrderModel.getProperty('/');
 
         var aPayload = aLineItems.map(oItem => {
@@ -248,6 +248,7 @@ sap.ui.define(
         );
       },
 
+      //TODO: Update checks and validations
       onAssignedResourceChanged: async function(oEvent) {
         var oControl = oEvent.getSource(),
           oViewModel = this.getView().getModel('viewModel');
@@ -270,11 +271,12 @@ sap.ui.define(
 
         //!This row should not have been editable.
         // Check if unitOfMeasure is not "KG" or "G", then disable the entire row
-        var isNew = oSelectedRowData.unitOfMeasure === 'KG' || oSelectedRowData.unitOfMeasure === 'G';
-        oViewModel.setProperty(oSelectedContext.getPath() + '/isNew', isNew);
+        // var isNew = oSelectedRowData.unitOfMeasure === 'KG' || oSelectedRowData.unitOfMeasure === 'G';
+        // oViewModel.setProperty(oSelectedContext.getPath() + '/isNew', isNew);
 
-        if (!isNew) {
+        if (oSelectedRowData.isBomRelevant && !oSelectedRowData.isUnitValid) {
           sap.m.MessageToast.show('Component is not scalable');
+          oViewModel.setProperty(oSelectedContext.getPath() + '/isNew', oSelectedRowData.isUnitValid);
           return; // Exit if the row is disabled
         }
 
@@ -344,27 +346,35 @@ sap.ui.define(
             return;
           }
 
-          this._getResourceOccupancy(oResourceData.resource).then(oResourceOccupancy => {
-            if (oResourceOccupancy['State_Signal'] !== 0) {
-              ErrorHandler.setErrorState(
-                oControl,
-                this.getI18nText('resourceHasExistingOperatorAssignmentErrMsg', [oResourceData.resource, oResourceOccupancy.OperatorName]),
-                'selectedKey'
-              );
+          this._getResourceOccupancy(oResourceData.resource)
+            .then(oResourceOccupancy => {
+              if (oResourceOccupancy['State_Signal'] !== 0) {
+                ErrorHandler.setErrorState(
+                  oControl,
+                  this.getI18nText('resourceHasExistingOperatorAssignmentErrMsg', [
+                    oResourceData.resource,
+                    oResourceOccupancy.OperatorName
+                  ]),
+                  'selectedKey'
+                );
 
-              return;
-            }
+                return;
+              }
 
-            // Auto-Populate Fields
-            oViewModel.setProperty(oSelectedContext.getPath() + '/resourceType', oResourceData.type);
+              // Auto-Populate Fields
+              oViewModel.setProperty(oSelectedContext.getPath() + '/resourceType', oResourceData.types);
 
-            // oViewModel.setProperty(oSelectedContext.getPath() + '/operator', oResourceData.operator || '');
-            if (oResourceData.operator) oViewModel.setProperty(oSelectedContext.getPath() + '/operator', oResourceData.operator);
-            oViewModel.setProperty(oSelectedContext.getPath() + '/lastModified', this.dateTimeFormatter(oResourceData.lastModified));
+              // oViewModel.setProperty(oSelectedContext.getPath() + '/operator', oResourceData.operator || '');
+              if (oResourceData.operator) oViewModel.setProperty(oSelectedContext.getPath() + '/operator', oResourceData.operator);
+              oViewModel.setProperty(oSelectedContext.getPath() + '/lastModified', this.dateTimeFormatter(oResourceData.lastModified));
 
-            // Set selected resource to line item
-            this._setLineItemResourceData(oViewModel, oSelectedContext.getPath(), oResourceData);
-          });
+              // Set selected resource to line item
+              this._setLineItemResourceData(oViewModel, oSelectedContext.getPath(), oResourceData);
+            })
+            .catch(oError => {
+              ErrorHandler.setErrorState(oControl, this.getI18nText('invalidResource'), 'selectedKey');
+              MessageBox.error(this.getI18nText('couldNotFetchResourceOccupancy', [oResourceData.resource]));
+            });
         });
       },
 
@@ -411,7 +421,7 @@ sap.ui.define(
 
         //Validate table items
         var oTable = this.getView().byId('idMassOpAsmtTable');
-        oTable.getItems().forEach(oItem => {
+        oTable.getItems().filter(oItem => oItem instanceof sap.m.ColumnListItem).forEach(oItem => {
           var oData = oItem.getBindingContext('viewModel').getObject(),
             aCells = oItem.getCells();
 
@@ -467,22 +477,48 @@ sap.ui.define(
         var oTable = this.getView().byId('idMassOpAsmtTable'),
           aSelectedItems = oTable.getSelectedItems();
 
-        var aPromises = aSelectedItems.map(
-          function(oItem) {
-            var oViewModel = this.getView().getModel('viewModel');
-            var oSelectedRowData = oItem.getBindingContext('viewModel').getObject();
-            var sPath = oItem.getBindingContext('viewModel').getPath();
+        var aItemsForServiceCall = aSelectedItems.reduce((acc, oItem) => {
+          var oSelectedRowData = oItem.getBindingContext('viewModel').getObject();
+          var sPath = oItem.getBindingContext('viewModel').getPath();
 
-            return this._revokeResource(oSelectedRowData.resource).then(
-              function() {
-                this._setLineItemResourceData(oViewModel, sPath, {}, true);
-              }.bind(this)
-            );
-          }.bind(this)
-        );
+          if (!oSelectedRowData.resource) return acc;
+
+          acc.push({
+            resource: oSelectedRowData.resource,
+            path: sPath
+          });
+          return acc;
+        }, []);
+
+        var aPromises = aItemsForServiceCall.map(oItem => {
+          var oViewModel = this.getView().getModel('viewModel');
+          return this._revokeResource(oItem.resource).then(
+            function() {
+              this._setLineItemResourceData(oViewModel, oItem.path, {}, true);
+            }.bind(this)
+          );
+        });
+
+        // var aPromises = aSelectedItems.map(
+        //   function(oItem) {
+        //     var oViewModel = this.getView().getModel('viewModel');
+        //     var oSelectedRowData = oItem.getBindingContext('viewModel').getObject();
+        //     var sPath = oItem.getBindingContext('viewModel').getPath();
+
+        //     return this._revokeResource(oSelectedRowData.resource)
+        //       .then(
+        //         function() {
+        //           this._setLineItemResourceData(oViewModel, sPath, {}, true);
+        //         }.bind(this)
+        //       )
+        //       .catch(oError => {
+        //         aErrors.push(oSelectedRowData.resource);
+        //       });
+        //   }.bind(this)
+        // );
 
         Promise.allSettled(aPromises).then(
-          function() {
+          function(aResponses) {
             oTable.removeSelections(true);
           }.bind(this)
         );
@@ -649,7 +685,7 @@ sap.ui.define(
           oGrModel = this.getView().getModel('grModel');
 
         if (oOrderDataModel) oOrderDataModel.setData({});
-        if (oViewModel) oViewModel.setData(this.initialViewModelData);
+        if (oViewModel) oViewModel.setData({...this.initialViewModelData});
         if (oRecipeModel) oRecipeModel.setData([]);
         if (oGrModel) oGrModel.setData([]);
       },
@@ -679,6 +715,7 @@ sap.ui.define(
           }, {});
 
           this._getWorkCenterData(Object.keys(oWorkCenters));
+          this._getGRSummary();
 
           this.getView().getModel('orderData').setData(oOrderData);
 
@@ -1041,8 +1078,8 @@ sap.ui.define(
               resource: oAssmt.RESOURCE,
               autoAcceptance: true,
               acceptanceDelay: oAssmt.ACCEPTANCE_DELAY,
-              operator: oAssmt.CORRECTION_TIME,
-              correctionTime: oAssmt.asdfasdf,
+              operator: oAssmt.OPERATOR,
+              correctionTime: oAssmt.CORRECTION_TIME,
               assignmentUpdatedAt: oAssmt.UPDATED_DATE_TIME,
               lastModified: oAssmt.UPDATED_DATE_TIME,
               InSeatNumber: oAssmt.SEAT_NUMBER,
@@ -1061,8 +1098,8 @@ sap.ui.define(
               resource: oAssmt.RESOURCE,
               autoAcceptance: true,
               acceptanceDelay: oAssmt.ACCEPTANCE_DELAY,
-              operator: oAssmt.CORRECTION_TIME,
-              correctionTime: oAssmt.asdfasdf,
+              operator: oAssmt.OPERATOR,
+              correctionTime: oAssmt.CORRECTION_TIME,
               assignmentUpdatedAt: oAssmt.UPDATED_DATE_TIME,
               lastModified: oAssmt.UPDATED_DATE_TIME,
               InSeatNumber: oAssmt.SEAT_NUMBER,
@@ -1112,7 +1149,7 @@ sap.ui.define(
 
         //TODO: Move below out of this function
         //Fire resource validations
-        let aTableItems = this.getView().byId('idMassOpAsmtTable').getItems();
+        let aTableItems = this.getView().byId('idMassOpAsmtTable').getItems().filter(oItem => oItem instanceof sap.m.ColumnListItem);
         for (var i in aTableItems) {
           let oSelect = aTableItems[i].getAggregation('cells')[4];
           if (oSelect.getSelectedKey()) oSelect.fireChange({ selectedItem: oSelect.getSelectedItem() });
@@ -1133,7 +1170,8 @@ sap.ui.define(
           InOperator: oItem.operator,
           InAutAcceptance: oItem.autoAcceptance,
           InAutoTimeDelay: oItem.acceptanceDelay,
-          InSubWeighing: oItem.resourceType.find(oType => oType.type === 'PORTIONING') ? true : false,
+          // InSubWeighing: oItem.resourceType.find(oType => oType.type === 'PORTIONING') ? true : false,
+          InSubWeighing: true, //Only portioning resources allowed
           InSFC: this.selectedSFC,
           InOrderBO: this.selectedOrder.order,
           InOperationActivity: oItem.operationActivity,
@@ -1191,6 +1229,7 @@ sap.ui.define(
         //TODO: Get defaults from config
         if (bNew) {
           oData.isNew = true;
+          oData.isDirty= false;
           oData.operator = '';
           oData.autoAcceptance = true;
           oData.acceptanceDelay = 1;

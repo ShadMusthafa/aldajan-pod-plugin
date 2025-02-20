@@ -374,6 +374,10 @@
                             <Switch 
                                 type="AcceptReject" 
                                 state="{= ${viewModel>InActive} ? true : false }" 
+                                enabled="{
+                                    parts:['viewModel>isUnitValid', 'viewModel>isBomRelevant'],
+                                    formatter: '.formatAddEnabled'
+                                }"
                                 change="onActiveStautsBtnPress">
                                 <layoutData>
                                     <FlexItemData growFactor="1" />
