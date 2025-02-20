@@ -964,7 +964,7 @@ sap.ui.define(
           recipe.phases.flatMap(phase =>
             phase.recipePhaseComponentList.map(component => ({
               isDirty: false,
-              isNew: false,
+              isNew: true,
               workCenter: phase.workCenter,
               workCenterDesc: this.workCenters[phase.workCenter].description,
               phaseId: phase.phaseId,
@@ -986,17 +986,30 @@ sap.ui.define(
               sequence: component.bomComponent.sequence,
               userAssignments: this.workCenters[phase.workCenter].userAssignments,
               resourceList: this._getResourceListForWorkCenter(this.workCenters[phase.workCenter].members),
-              InSeatNumber: (InSeatNumber = InSeatNumber + 100),
-              InActive: 0
+              // InSeatNumber: (InSeatNumber = InSeatNumber + 100),
+              InSeatNumber: 0,
+              InActive: 0,
+              WORK_CENTER: phase.workCenter,
+              COMPONENT: component.bomComponent.material.material
             }))
           )
         );
 
-        aRecipeItems = aRecipeItems.map(oItem => {
-          return { ...oItem, WORK_CENTER: oItem.workCenter, COMPONENT: oItem.component };
-        });
-
         var aLineItems = this._mergeArrayByKeys(aRecipeItems, aExistingAssignments, ['WORK_CENTER', 'COMPONENT']);
+
+        //If component does not have seat number, assign the highest sequence
+        var iLastSequenceNo = aLineItems.reduce((acc, val) => {
+          if (val.InSeatNumber > acc) acc = val.InSeatNumber;
+          return acc;
+        }, 0);
+
+        aLineItems.filter(oItem => oItem.isBomRelevant).forEach(oItem => {
+          if (oItem.InSeatNumber === 0) {
+            var iNextSequence = Math.ceil(iLastSequenceNo / 100) * 100;
+            oItem.InSeatNumber = iNextSequence;
+            iLastSequenceNo = iNextSequence;
+          }
+        });
 
         this.getView().getModel('viewModel').setProperty('/lineItems1', aLineItems);
 
@@ -1017,12 +1030,14 @@ sap.ui.define(
           var oLineItem;
 
           if (oRecipeMap.has(sKey)) {
-            //Matched with existing resource
+            //Matched with existing assignment
             var oItem = oRecipeMap.get(sKey);
+            var oBomComponent = this.oBomComponentsMap[oItem.component];
             oLineItem = {
               ...oItem,
-              isNew: false,
+              isNew: !oAssmt.RESOURCE,
               isBomRelevant: true,
+              isUnitValid: oBomComponent && (oBomComponent.unitOfMeasure === 'KG' || oBomComponent.unitOfMeasure === 'G'),
               resource: oAssmt.RESOURCE,
               autoAcceptance: true,
               acceptanceDelay: oAssmt.ACCEPTANCE_DELAY,
@@ -1039,8 +1054,9 @@ sap.ui.define(
           } else {
             //Not matched scenario
             oLineItem = {
-              isNew: true,
+              isNew: false,
               isDirty: false,
+              isUnitValid: false,
               isBomRelevant: false,
               resource: oAssmt.RESOURCE,
               autoAcceptance: true,
@@ -1094,38 +1110,13 @@ sap.ui.define(
         }
         this.getView().getModel('viewModel').setProperty('/lineItems', aLineItems);
 
-        //     // Find elements in array1 that are not in array2
-        //     let difference = aData.filter(
-        //       obj1 => !aLineItems.some(obj2 => obj2.component === obj1.COMPONENT && obj2.InSeatNumber === obj1.SEAT_NUMBER)
-        //     );
-
-        //     for (var i in difference) {
-        //       aLineItems.push({
-        //         ...aLineItems[0],
-
-        //         InSeatNumber: difference[i].SEAT_NUMBER,
-        //         acceptanceDelay: difference[i].ACCEPTANCE_DELAY,
-        //         InActive: difference[i].ACTIVE,
-        //         component: difference[i].COMPONENT,
-        //         correctionTime: difference[i].CORRECTION_TIME,
-        //         operator: difference[i].OPERATOR,
-        //         resource: difference[i].RESOURCE,
-        //         workCenter: difference[i].WORK_CENTER,
-        //         lastModified: difference[i].UPDATED_DATE_TIME,
-        //         isNew: true
-        //       });
-        //     }
-        //   }
-
-        //   this.getView().byId('idMassOpAsmtTable').getBinding('items').sort(new sap.ui.model.Sorter('InSeatNumber', false));
-        //   this.getView().getModel('viewModel').setProperty('/lineItems', aLineItems);
-
-        //   let aTableItems = this.getView().byId('idMassOpAsmtTable').getItems();
-        //   for (var i in aTableItems) {
-        //     let oSelect = aTableItems[i].getAggregation('cells')[4];
-        //     if (oSelect.getSelectedKey()) oSelect.fireChange({ selectedItem: oSelect.getSelectedItem() });
-        //   }
-        // });
+        //TODO: Move below out of this function
+        //Fire resource validations
+        let aTableItems = this.getView().byId('idMassOpAsmtTable').getItems();
+        for (var i in aTableItems) {
+          let oSelect = aTableItems[i].getAggregation('cells')[4];
+          if (oSelect.getSelectedKey()) oSelect.fireChange({ selectedItem: oSelect.getSelectedItem() });
+        }
       },
 
       _assignResource: function(oItem) {
@@ -1222,6 +1213,10 @@ sap.ui.define(
 
       formatRowEditable: function(bIsNew, bIsUnitValid, bIsBomRelevant) {
         return bIsNew && bIsUnitValid && bIsBomRelevant;
+      },
+
+      formatAddEnabled: function(bIsUnitValid, bIsBomRelevant) {
+        return bIsUnitValid && bIsBomRelevant;
       },
 
       formatRowEditable1: function(bIsUnitValid) {

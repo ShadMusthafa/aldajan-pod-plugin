@@ -341,8 +341,8 @@
                                 text="Add"
                                 press=".onAddResouceBtnPress"
                                 enabled="{
-                                    parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
-                                    formatter: '.formatRowEditable'
+                                    parts:['viewModel>isUnitValid', 'viewModel>isBomRelevant'],
+                                    formatter: '.formatAddEnabled'
                                 }"
                             />
                             <Button
@@ -374,10 +374,6 @@
                             <Switch 
                                 type="AcceptReject" 
                                 state="{= ${viewModel>InActive} ? true : false }" 
-                                enabled="{
-                                    parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
-                                    formatter: '.formatRowEditable'
-                                }"
                                 change="onActiveStautsBtnPress">
                                 <layoutData>
                                     <FlexItemData growFactor="1" />
