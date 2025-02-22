@@ -186,8 +186,17 @@ sap.ui.define(
       },
 
       onTableItemsSelectionChange: function(oEvent) {
-        var aSelectedRows = oEvent.getParameter('listItems');
-        console.log(aSelectedRows);
+        var oTable = oEvent.getSource(),
+          oSelectedItem = oEvent.getParameter('listItem'),
+          oSelectedContext = oSelectedItem.getBindingContext('viewModel'),
+          bIsBomRelevant = oSelectedContext.getProperty('isBomRelevant');
+
+        //If user has selected non BOM line item, auto deselect
+        if (!bIsBomRelevant) {
+          oTable.setSelectedItem(oSelectedItem, false);
+          sap.m.MessageToast.show(this.getI18nText('nonBomRelevantItemSelectErrMsg'));
+          return;
+        }
       },
 
       //TODO: Recheck
@@ -1101,7 +1110,7 @@ sap.ui.define(
               asset: ''
             };
           } else {
-            //Not matched scenario
+            //Not matched scenario - Not BOM Relevant
             oLineItem = {
               isNew: false,
               isDirty: false,
