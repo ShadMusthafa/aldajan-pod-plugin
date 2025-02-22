@@ -1133,7 +1133,8 @@ sap.ui.define(
               componentDesc: '',
               workCenter: oAssmt.WORK_CENTER,
               workCenterDesc: '',
-              phaseId: ''
+              phaseId: '',
+              resourceList: this._getResourceListForWorkCenter(this.workCenters[oAssmt.WORK_CENTER].members),
             };
           }
           var oResource = this._getDetailsForResource(oAssmt.RESOURCE);
