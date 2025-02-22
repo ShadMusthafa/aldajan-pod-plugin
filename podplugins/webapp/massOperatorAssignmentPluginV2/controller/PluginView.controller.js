@@ -1037,7 +1037,7 @@ sap.ui.define(
         if (aExistingAssignments.length === 0) {
           aLineItems = aRecipeItems;
           aLineItems.forEach(oLineItem => {
-            var oBomComponent = this.oBomComponentsMap[oItem.component];
+            var oBomComponent = this.oBomComponentsMap[oLineItem.component];
             oLineItem.isUnitValid = oBomComponent && (oBomComponent.unitOfMeasure === 'KG' || oBomComponent.unitOfMeasure === 'G');
           });
         } else {
@@ -1054,7 +1054,7 @@ sap.ui.define(
 
         aLineItems.filter(oItem => oItem.isBomRelevant).forEach(oItem => {
           if (oItem.InSeatNumber === 0) {
-            var iNextSequence = Math.ceil(iLastSequenceNo / 100) * 100;
+            var iNextSequence = Math.ceil((iLastSequenceNo + 1) / 100) * 100;
             oItem.InSeatNumber = iNextSequence;
             iLastSequenceNo = iNextSequence + 1;
           }
@@ -1137,6 +1137,15 @@ sap.ui.define(
             }
           }
           aLineItems.push(oLineItem);
+        });
+
+        aRecipeData.forEach(oRecipeItem => {
+          var sKey = getKey(oRecipeItem);
+          if (!aExistingAssignments.some(oAssmt => getKey(oAssmt) === sKey)) {
+            var oBomComponent = this.oBomComponentsMap[oRecipeItem.component];
+            oRecipeItem.isUnitValid = oBomComponent && (oBomComponent.unitOfMeasure === 'KG' || oBomComponent.unitOfMeasure === 'G');
+            aLineItems.push(oRecipeItem);
+          }
         });
 
         return aLineItems;
