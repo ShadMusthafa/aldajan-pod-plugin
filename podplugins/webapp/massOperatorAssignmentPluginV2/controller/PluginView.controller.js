@@ -422,15 +422,20 @@ sap.ui.define(
 
       onSaveAssignmentsPress: function(oEvent) {
         var oViewModel = this.getView().getModel('viewModel');
-        var aItems = oViewModel.getProperty('/lineItems');
+        var aLineItems = oViewModel.getProperty('/lineItems');
 
         if (ErrorHandler.hasErrors()) {
           return MessageBox.error(this.getI18nText('fixErrorsBeforeSaveErrMsg'));
         }
 
-        //Validate table items
-        var oTable = this.getView().byId('idMassOpAsmtTable');
-        oTable.getItems().filter(oItem => oItem instanceof sap.m.ColumnListItem).forEach(oItem => {
+        var oTable = this.getView().byId('idMassOpAsmtTable'),
+          aSelectedItems = oTable.getSelectedItems();
+
+        //No rows selected
+        if (aSelectedItems.length === 0) return;
+
+        //Validate seelcted items
+        aSelectedItems.forEach(oItem => {
           var oData = oItem.getBindingContext('viewModel').getObject(),
             aCells = oItem.getCells();
 
@@ -453,32 +458,25 @@ sap.ui.define(
           if (oData.autoAcceptance && parseInt(oData.acceptanceDelay) < 1) {
             ErrorHandler.setErrorState(aCells[7], this.getI18nText('inputPositiveNonZeroErrMsg'));
           }
+
+          var oOtherAssignment = aLineItems.find(oLineItem => oLineItem.operator === oData.operator);
+          if (oOtherAssignment) {
+            ErrorHandler.setErrorState(
+              aCells[5],
+              this.getI18nText('operatorAlreadyAssignedToComponentErrMsg', [
+                oData.operator,
+                oOtherAssignment.component,
+                oOtherAssignment.resource
+              ])
+            );
+          }
         });
 
         if (ErrorHandler.hasErrors()) {
           return MessageBox.error(this.getI18nText('fixErrorsBeforeSaveErrMsg'));
         }
-        var oOperatorMap = {}; // Store operator occurrences
-        var bHasDuplicates = false;
 
-        for (var i = 0; i < aItems.length; i++) {
-          var sOperator = aItems[i].operator;
-
-          if (sOperator) {
-            if (oOperatorMap[sOperator]) {
-              bHasDuplicates = true;
-              break; // Exit loop early if duplicate found
-            }
-            oOperatorMap[sOperator] = true;
-          }
-        }
-
-        if (bHasDuplicates) {
-          MessageBox.error('Duplicate operator detected! Please assign a different operator in each row.');
-          return; // Stop execution
-        }
-
-        var aItemsForServiceCall = aItems.filter(oItem => oItem.isDirty);
+        var aItemsForServiceCall = aSelectedItems.map(oItem => oItem.getBindingContext('viewModel').getObject());
         this._saveResourceAssignments(aItemsForServiceCall);
       },
 
@@ -1134,7 +1132,7 @@ sap.ui.define(
               workCenter: oAssmt.WORK_CENTER,
               workCenterDesc: '',
               phaseId: '',
-              resourceList: this._getResourceListForWorkCenter(this.workCenters[oAssmt.WORK_CENTER].members),
+              resourceList: this._getResourceListForWorkCenter(this.workCenters[oAssmt.WORK_CENTER].members)
             };
           }
           var oResource = this._getDetailsForResource(oAssmt.RESOURCE);
