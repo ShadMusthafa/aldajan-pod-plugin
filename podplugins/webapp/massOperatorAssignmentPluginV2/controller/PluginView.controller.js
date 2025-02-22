@@ -54,7 +54,7 @@ sap.ui.define(
 
         this.materialsList = {};
         this.workCenters = {};
-        this.getView().setModel(new JSONModel({...this.initialViewModelData}), 'viewModel');
+        this.getView().setModel(new JSONModel({ ...this.initialViewModelData }), 'viewModel');
         this.getView().setModel(new JSONModel([]), 'resourceData');
         this.getView().setModel(new JSONModel({}), 'orderData');
         this.getView().setModel(new JSONModel([]), 'recipeData');
@@ -685,7 +685,7 @@ sap.ui.define(
           oGrModel = this.getView().getModel('grModel');
 
         if (oOrderDataModel) oOrderDataModel.setData({});
-        if (oViewModel) oViewModel.setData({...this.initialViewModelData});
+        if (oViewModel) oViewModel.setData({ ...this.initialViewModelData });
         if (oRecipeModel) oRecipeModel.setData([]);
         if (oGrModel) oGrModel.setData([]);
       },
@@ -1002,6 +1002,7 @@ sap.ui.define(
             phase.recipePhaseComponentList.map(component => ({
               isDirty: false,
               isNew: true,
+              isBomRelevant: true,
               workCenter: phase.workCenter,
               workCenterDesc: this.workCenters[phase.workCenter].description,
               phaseId: phase.phaseId,
@@ -1032,7 +1033,16 @@ sap.ui.define(
           )
         );
 
-        var aLineItems = this._mergeArrayByKeys(aRecipeItems, aExistingAssignments, ['WORK_CENTER', 'COMPONENT']);
+        var aLineItems = [];
+        if (aExistingAssignments.length === 0) {
+          aLineItems = aRecipeItems;
+          aLineItems.forEach(oLineItem => {
+            var oBomComponent = this.oBomComponentsMap[oItem.component];
+            oLineItem.isUnitValid = oBomComponent && (oBomComponent.unitOfMeasure === 'KG' || oBomComponent.unitOfMeasure === 'G');
+          });
+        } else {
+          aLineItems = this._mergeArrayByKeys(aRecipeItems, aExistingAssignments, ['WORK_CENTER', 'COMPONENT']);
+        }
 
         //If component does not have seat number, assign the highest sequence
         var iLastSequenceNo = aLineItems.reduce((acc, val) => {
@@ -1040,11 +1050,13 @@ sap.ui.define(
           return acc;
         }, 0);
 
+        if (iLastSequenceNo === 0) iLastSequenceNo = 1;
+
         aLineItems.filter(oItem => oItem.isBomRelevant).forEach(oItem => {
           if (oItem.InSeatNumber === 0) {
             var iNextSequence = Math.ceil(iLastSequenceNo / 100) * 100;
             oItem.InSeatNumber = iNextSequence;
-            iLastSequenceNo = iNextSequence;
+            iLastSequenceNo = iNextSequence + 1;
           }
         });
 
@@ -1229,7 +1241,7 @@ sap.ui.define(
         //TODO: Get defaults from config
         if (bNew) {
           oData.isNew = true;
-          oData.isDirty= false;
+          oData.isDirty = false;
           oData.operator = '';
           oData.autoAcceptance = true;
           oData.acceptanceDelay = 1;
