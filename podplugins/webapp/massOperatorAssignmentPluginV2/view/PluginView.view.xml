@@ -169,10 +169,6 @@
                             descending: false
                         },
                         {
-                            path: 'componentDesc',
-                            descending: false
-                        },
-                        {
                             path: 'InSeatNumber',
                             descending: false
                         }
