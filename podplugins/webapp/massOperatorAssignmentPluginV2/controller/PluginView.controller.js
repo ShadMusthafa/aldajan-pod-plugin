@@ -1168,13 +1168,15 @@ sap.ui.define(
         }
         this.getView().getModel('viewModel').setProperty('/lineItems', aLineItems);
 
+        this._checkResourceAssignments();
+
         //TODO: Move below out of this function
-        //Fire resource validations
-        let aTableItems = this.getView().byId('idMassOpAsmtTable').getItems().filter(oItem => oItem instanceof sap.m.ColumnListItem);
-        for (var i in aTableItems) {
-          let oSelect = aTableItems[i].getAggregation('cells')[4];
-          if (oSelect.getSelectedKey()) oSelect.fireChange({ selectedItem: oSelect.getSelectedItem() });
-        }
+        // //Fire resource validations
+        // let aTableItems = this.getView().byId('idMassOpAsmtTable').getItems().filter(oItem => oItem instanceof sap.m.ColumnListItem);
+        // for (var i in aTableItems) {
+        //   let oSelect = aTableItems[i].getAggregation('cells')[4];
+        //   if (oSelect.getSelectedKey()) oSelect.fireChange({ selectedItem: oSelect.getSelectedItem() });
+        // }
       },
 
       _assignResource: function(oItem) {
@@ -1258,6 +1260,32 @@ sap.ui.define(
         }
 
         oModel.setProperty(sPath, oData);
+      },
+
+      _checkResourceAssignments: async function() {
+        var oViewModel = this.getView().getModel('viewModel'),
+          aLineItems = oViewModel.getProperty('/lineItems');
+
+        var aPromises = aLineItems.map(async oItem => {
+          //Perform check only for BOM relevant items
+          if (!oItem.isBomRelevant) return oItem;
+
+          var oResourceAssignment = await this._getResourceOccupancy(oItem.resource);
+
+          //Below check performs the following logic
+          //  If the resource has been revoked and the scale is not occupied, show line as editable
+          // //  If the resource is assigned to another operator, show line as editable and error on operator field
+          if (oResourceAssignment['State_Signal'] === 0) {
+            oItem.isNew = true;
+          }
+          // else if (oResourceAssignment.OperatorName !== oItem.operator) {
+          //   oItem.isNew = true;
+          // }
+          return oItem;
+        });
+
+        var aUpdatedLines = await Promise.all(aPromises);
+        oViewModel.setProperty('/lineItems', aUpdatedLines);
       },
 
       //TODO: Move below to formatter
