@@ -473,6 +473,16 @@ sap.ui.define(
               ])
             );
           }
+
+          //Check if the resource has existing assignment
+          var oCurrAsmt = oData.currentResourceAssignment;
+          if (oCurrAsmt) {
+            ErrorHandler.setErrorState(
+              oItem.getCells()[4],
+              this.getI18nText('resorceAltAssmt.assignedToOtherOrderErrMsg', [oCurrAsmt.component, oCurrAsmt.order]),
+              'selectedKey'
+            );
+          }
         });
 
         if (ErrorHandler.hasErrors()) {
@@ -505,6 +515,11 @@ sap.ui.define(
           return this._revokeResource(oItem.resource).then(
             function() {
               this._setLineItemResourceData(oViewModel, oItem.path, {}, true);
+
+              //Clear any current assignment when resource is revoked
+              var oData = oViewModel.getProperty(oItem.path);
+              oData.currentResourceAssignment = null;
+              oViewModel.setProperty(oItem.path, oData);
             }.bind(this)
           );
         });
@@ -1182,14 +1197,6 @@ sap.ui.define(
         this.getView().getModel('viewModel').setProperty('/lineItems', aLineItems);
 
         this._checkResourceAssignments();
-
-        //TODO: Move below out of this function
-        // //Fire resource validations
-        // let aTableItems = this.getView().byId('idMassOpAsmtTable').getItems().filter(oItem => oItem instanceof sap.m.ColumnListItem);
-        // for (var i in aTableItems) {
-        //   let oSelect = aTableItems[i].getAggregation('cells')[4];
-        //   if (oSelect.getSelectedKey()) oSelect.fireChange({ selectedItem: oSelect.getSelectedItem() });
-        // }
       },
 
       _assignResource: function(oItem) {
@@ -1296,7 +1303,7 @@ sap.ui.define(
           if (oResourceAssignment['State_Signal'] === 0) {
             oItem.isNew = true;
             // return oItem;
-          }else if (
+          } else if (
             oResCustomData.OPERATOR === oItem.operator &&
             oResCustomData.ORDER === this.selectedOrder.order &&
             oResCustomData.MATERIAL === oItem.component
@@ -1306,6 +1313,11 @@ sap.ui.define(
           } else {
             //If the assignment is for a different order, component or operator,
             oItem.isNew = true;
+            oItem.currentResourceAssignment = {
+              order: oResCustomData.ORDER,
+              component: oResCustomData.MATERIAL,
+              operator: oResCustomData.OPERATOR
+            };
           }
 
           return oItem;
