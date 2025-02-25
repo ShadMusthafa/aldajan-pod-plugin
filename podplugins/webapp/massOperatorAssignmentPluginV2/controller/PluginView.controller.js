@@ -551,7 +551,6 @@ sap.ui.define(
 
       onAddResouceBtnPress: function(oEvent) {
         // Get the context of the selected row from the event
-
         var oSelectedRowContext = oEvent.getSource().getBindingContext('viewModel');
         var oSelectedRowData = oSelectedRowContext.getObject();
         var aSameComponent = this.getView().getModel('viewModel').getProperty('/lineItems').filter(oItem => {
@@ -563,6 +562,9 @@ sap.ui.define(
           ...oSelectedRowData, // Copy the component details
           isDirty: true,
           isNew: true,
+          isBomRelevant: true,
+          isUnitValid: true,
+          isDeletable: true,
           asset: '',
           resource: '',
           resourceType: '',
@@ -1066,6 +1068,7 @@ sap.ui.define(
           aLineItems.forEach(oLineItem => {
             var oBomComponent = this.oBomComponentsMap[oLineItem.component];
             oLineItem.isUnitValid = oBomComponent && (oBomComponent.unitOfMeasure === 'KG' || oBomComponent.unitOfMeasure === 'G');
+            oLineItem.isDeletable = false;
           });
         } else {
           aLineItems = this._mergeArrayByKeys(aRecipeItems, aExistingAssignments, ['WORK_CENTER', 'COMPONENT']);
@@ -1113,6 +1116,7 @@ sap.ui.define(
               ...oItem,
               isNew: !oAssmt.RESOURCE,
               isBomRelevant: true,
+              isDeletable: false,
               isUnitValid: oBomComponent && (oBomComponent.unitOfMeasure === 'KG' || oBomComponent.unitOfMeasure === 'G'),
               resource: oAssmt.RESOURCE,
               autoAcceptance: true,
@@ -1134,6 +1138,7 @@ sap.ui.define(
               isDirty: false,
               isUnitValid: true, //Items in the assignment table are assumed to be having valid units
               isBomRelevant: false,
+              isDeletable: false,
               resource: oAssmt.RESOURCE,
               autoAcceptance: true,
               acceptanceDelay: oAssmt.ACCEPTANCE_DELAY,

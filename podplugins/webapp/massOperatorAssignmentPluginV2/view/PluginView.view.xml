@@ -353,7 +353,7 @@
                             <Button
                                 icon="sap-icon://delete"
                                 press=".onDeleteResourceBtnPress"
-                                visible="{= ${viewModel>isNew} === true}"
+                                visible="{= ${viewModel>isDeletable} === true}"
                                 tooltip="Delete Row"
                                 enabled="{
                                     parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
