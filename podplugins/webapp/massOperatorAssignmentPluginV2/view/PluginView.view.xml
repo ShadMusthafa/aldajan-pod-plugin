@@ -173,6 +173,7 @@
                             descending: false
                         }
                     ],
+                    filters:[{path:'isUnitValid', operator:'EQ', value1:true}],
                     groupHeaderFactory: '.getGroupHeader'
                 }"
             >
@@ -186,7 +187,7 @@
                     </Column>
                     <Column
                         mergeDuplicates="false"
-                        width="6rem"
+                        width="4rem"
                     >
                         <Label design="Bold" wrapping="true" text="Phase Id" />
                     </Column>
@@ -198,7 +199,7 @@
                     </Column>
                     <Column
                         mergeDuplicates="false"
-                        width="6rem"
+                        width="5rem"
                     >
                         <Label design="Bold" wrapping="true" text="Seat Number" />
                     </Column>
@@ -292,7 +293,7 @@
                             <items>
                                 <SegmentedButtonItem
                                     key="auto"
-                                    text="Automatic"
+                                    text="Auto"
                                 />
                                 <SegmentedButtonItem
                                     key="manual"

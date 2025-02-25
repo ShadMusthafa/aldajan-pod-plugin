@@ -88,10 +88,10 @@ sap.ui.define(
         this._resetModels();
 
         // Reset the filter bar state if required
-        var oFilterBar = oView.byId('idFilterBar');
-        if (oFilterBar) {
-          oFilterBar.fireClear();
-        }
+        // var oFilterBar = oView.byId('idFilterBar');
+        // if (oFilterBar) {
+        //   oFilterBar.fireClear();
+        // }
       },
 
       onOrderInputChange: function(oEvent) {
@@ -218,11 +218,11 @@ sap.ui.define(
         // Check if operator is already assigned in another row
         var bDuplicate = aLineItems.some(function(oItem, index) {
           var sItemPath = '/lineItems/' + index;
-          if (sItemPath !== sCurrentPath && oItem.operator === sNewOperator) {
+          if (oItem.isBomRelevant && sItemPath !== sCurrentPath && oItem.operator === sNewOperator) {
             dupComponent = oItem.component;
             resource = oItem.resource;
           }
-          return sItemPath !== sCurrentPath && oItem.operator === sNewOperator;
+          return oItem.isBomRelevant && sItemPath !== sCurrentPath && oItem.operator === sNewOperator;
         });
 
         if (bDuplicate) {
@@ -311,10 +311,10 @@ sap.ui.define(
         var sCurrentPath = oControl.getBindingContext('viewModel').getPath();
         var bDuplicate = aLineItems.some(function(oItem, index) {
           var sItemPath = '/lineItems/' + index;
-          if (sItemPath !== sCurrentPath && oItem.resource === sNewResource) {
+          if (oItem.isBomRelevant && sItemPath !== sCurrentPath && oItem.resource === sNewResource) {
             dupComponent = oItem.component;
           }
-          return sItemPath !== sCurrentPath && oItem.resource === sNewResource;
+          return oItem.isBomRelevant && sItemPath !== sCurrentPath && oItem.resource === sNewResource;
         });
 
         if (bDuplicate) {
@@ -452,17 +452,20 @@ sap.ui.define(
           }
 
           if (!oData.operator) {
-            ErrorHandler.setErrorState(aCells[5], this.getI18nText('requiredFieldErrMsg'));
+            ErrorHandler.setErrorState(aCells[6], this.getI18nText('requiredFieldErrMsg'));
           }
 
           if (oData.autoAcceptance && parseInt(oData.acceptanceDelay) < 1) {
             ErrorHandler.setErrorState(aCells[7], this.getI18nText('inputPositiveNonZeroErrMsg'));
           }
 
-          var oOtherAssignment = aLineItems.find(oLineItem => oLineItem.operator === oData.operator);
+          //Check if the operator is unique in the table
+          var oOtherAssignment = aLineItems.find(
+            oLineItem => oLineItem.isBomRelevant && oLineItem.operator === oData.operator && oLineItem.InSeatNumber !== oData.InSeatNumber
+          );
           if (oOtherAssignment) {
             ErrorHandler.setErrorState(
-              aCells[5],
+              aCells[6],
               this.getI18nText('operatorAlreadyAssignedToComponentErrMsg', [
                 oData.operator,
                 oOtherAssignment.component,
@@ -810,6 +813,8 @@ sap.ui.define(
             this.getView().getModel('resourceData').setSizeLimit(aResources.length);
           }
 
+          this.resourceList = aResources;
+
           return aResources;
         });
 
@@ -1059,7 +1064,7 @@ sap.ui.define(
 
         if (iLastSequenceNo === 0) iLastSequenceNo = 1;
 
-        aLineItems.filter(oItem => oItem.isBomRelevant).forEach(oItem => {
+        aLineItems.filter(oItem => oItem.isBomRelevant && oItem.isUnitValid).forEach(oItem => {
           if (oItem.InSeatNumber === 0) {
             var iNextSequence = Math.ceil((iLastSequenceNo + 1) / 100) * 100;
             oItem.InSeatNumber = iNextSequence;
@@ -1112,7 +1117,7 @@ sap.ui.define(
             oLineItem = {
               isNew: false,
               isDirty: false,
-              isUnitValid: false,
+              isUnitValid: true, //Items in the assignment table are assumed to be having valid units
               isBomRelevant: false,
               resource: oAssmt.RESOURCE,
               autoAcceptance: true,
@@ -1132,7 +1137,7 @@ sap.ui.define(
               workCenter: oAssmt.WORK_CENTER,
               workCenterDesc: '',
               phaseId: '',
-              resourceList: this._getResourceListForWorkCenter(this.workCenters[oAssmt.WORK_CENTER].members)
+              resourceList: this.resourceList
             };
           }
           var oResource = this._getDetailsForResource(oAssmt.RESOURCE);
@@ -1276,19 +1281,33 @@ sap.ui.define(
 
         var aPromises = aLineItems.map(async oItem => {
           //Perform check only for BOM relevant items
-          if (!oItem.isBomRelevant) return oItem;
+          if (!oItem.isBomRelevant || !oItem.resource) return oItem;
 
-          var oResourceAssignment = await this._getResourceOccupancy(oItem.resource);
+          var oResourceAssignment = await this._getResourceOccupancy(oItem.resource).catch(oError => {
+            oItem.isNew = true;
+            console.error(oError);
+            return;
+          });
 
-          //Below check performs the following logic
-          //  If the resource has been revoked and the scale is not occupied, show line as editable
-          // //  If the resource is assigned to another operator, show line as editable and error on operator field
+          var oResource = this._getDetailsForResource(oItem.resource),
+            oResCustomData = oResource.customData;
+
+          //If the signal is zero, the resource is not currently assigned show as editable
           if (oResourceAssignment['State_Signal'] === 0) {
             oItem.isNew = true;
+            // return oItem;
+          }else if (
+            oResCustomData.OPERATOR === oItem.operator &&
+            oResCustomData.ORDER === this.selectedOrder.order &&
+            oResCustomData.MATERIAL === oItem.component
+          ) {
+            //Check resource custom data for current assignment. If assignment is valid, show as not editable
+            oItem.isNew = false;
+          } else {
+            //If the assignment is for a different order, component or operator,
+            oItem.isNew = true;
           }
-          // else if (oResourceAssignment.OperatorName !== oItem.operator) {
-          //   oItem.isNew = true;
-          // }
+
           return oItem;
         });
 
