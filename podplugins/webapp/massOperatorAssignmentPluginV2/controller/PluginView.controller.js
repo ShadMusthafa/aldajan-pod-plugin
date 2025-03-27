@@ -1305,7 +1305,7 @@ sap.ui.define(
             oResCustomData = oResource.customData;
 
           //If the signal is zero, the resource is not currently assigned show as editable
-          if (oResourceAssignment['State_Signal'] === 0) {
+          if (oResourceAssignment && oResourceAssignment['State_Signal'] === 0) {
             oItem.isNew = true;
             // return oItem;
           } else if (
