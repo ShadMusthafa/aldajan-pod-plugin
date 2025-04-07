@@ -971,7 +971,10 @@ sap.ui.define(
       },
 
       _getResourceOccupancy: function(sResourceId) {
-        var sUrl = this.PPD_BASE_URL + 'key=REG_f22f235e-1e89-4553-b952-7ac229b79065&async=false';
+        //AD_MT_HANDSHAKE_imported - CPP_testResourceOccupancy
+        // var sUrl = this.PPD_BASE_URL + 'key=REG_f22f235e-1e89-4553-b952-7ac229b79065&async=false';
+        //AD_MT_HANDSHAKE_CURRENT - CPP_testResourceOccupancy
+        var sUrl = this.PPD_BASE_URL + 'key=REG_b307a904-2555-450f-94b1-c3621a7835b4&async=false';
         var oPayload = {
           InPlant: this.getPodController().getUserPlant(),
           InResource: sResourceId
@@ -986,7 +989,10 @@ sap.ui.define(
       },
 
       _getOperatorOccupancy: function(sOperatorId) {
-        var sUrl = this.PPD_BASE_URL + 'key=REG_8f3da8b6-8b63-49a6-a45c-f13a029f7812&async=false';
+        //AD_MT_HANDSHAKE_imported  - CPP_testOperatorOccupancy
+        // var sUrl = this.PPD_BASE_URL + 'key=REG_8f3da8b6-8b63-49a6-a45c-f13a029f7812&async=false';
+        //AD_MT_HANDSHAKE_CURRENT  - CPP_testOperatorOccupancy
+        var sUrl = this.PPD_BASE_URL + 'key=REG_5ce1f41f-1899-4ac1-87b2-1d2773a71fc8&async=false';
         var oPayload = {
           InOperator: sOperatorId
         };
@@ -1205,7 +1211,10 @@ sap.ui.define(
       },
 
       _assignResource: function(oItem) {
-        var sUrl = this.PPD_BASE_URL + 'key=REG_e64981d3-2a78-4751-8e86-f796485f1db5&async=false';
+        //AD_MT_HANDSHAKE_imported - CPP_assignOperator
+        // var sUrl = this.PPD_BASE_URL + 'key=REG_e64981d3-2a78-4751-8e86-f796485f1db5&async=false';
+        //AD_MT_HANDSHAKE_CURRENT - CPP_assignOperator
+        var sUrl = this.PPD_BASE_URL + 'key=REG_2f6052ea-915e-4f89-9e23-40b261aa40f7&async=false';
 
         var oPayload = {
           InOrderStatus: this.selectedOrder.executionStatus,
@@ -1236,7 +1245,10 @@ sap.ui.define(
       },
 
       _revokeResource: function(sResourceId) {
-        var sUrl = this.PPD_BASE_URL + 'key=REG_c245216f-4e25-4b85-8593-ed44db51a531&async=false';
+        //AD_MT_HANDSHAKE_imported - CPP_unAssignOperator
+        // var sUrl = this.PPD_BASE_URL + 'key=REG_c245216f-4e25-4b85-8593-ed44db51a531&async=false';
+        //AD_MT_HANDSHAKE_CURRENT - CPP_unAssignOperator
+        var sUrl = this.PPD_BASE_URL + 'key=REG_f22a85b1-89c5-40cb-b8ca-98f4a37eefe4&async=false';
         var oPayload = {
           InPlant: this.getPodController().getUserPlant(),
           InResource: sResourceId
