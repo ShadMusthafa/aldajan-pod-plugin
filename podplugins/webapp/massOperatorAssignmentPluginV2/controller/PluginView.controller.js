@@ -5,21 +5,21 @@ sap.ui.define(
     'sap/base/Log',
     'sap/m/MessageBox',
     '../util/ErrorHandler',
-    '../util/formatter'
+    '../util/formatter',
   ],
-  function(JSONModel, PluginViewController, Log, MessageBox, ErrorHandler, formatter) {
+  function (JSONModel, PluginViewController, Log, MessageBox, ErrorHandler, formatter) {
     'use strict';
 
     var oLogger = Log.getLogger('massOperatorAssignmentPlugin', Log.Level.INFO);
 
     var oPluginViewController = PluginViewController.extend('arun.ext.podplugins.massOperatorAssignmentPluginV2.controller.PluginView', {
       metadata: {
-        properties: {}
+        properties: {},
       },
 
       formatter: formatter,
 
-      onInit: function() {
+      onInit: function () {
         if (PluginViewController.prototype.onInit) {
           PluginViewController.prototype.onInit.apply(this, arguments);
         }
@@ -36,20 +36,20 @@ sap.ui.define(
           acceptanceDelay: 1, // Default Acceptance Delay
           tableHeaderBtn: {
             assign: {
-              enabled: false
+              enabled: false,
             },
             revoke: {
-              enabled: false
+              enabled: false,
             },
             add: {
-              enabled: false
+              enabled: false,
             },
             remove: {
-              enabled: false
-            }
+              enabled: false,
+            },
           },
           lineItems: [],
-          workCenters: []
+          workCenters: [],
         };
 
         this.materialsList = {};
@@ -61,21 +61,58 @@ sap.ui.define(
         this.getView().setModel(new JSONModel([]), 'grModel');
       },
 
-      onBeforeRenderingPlugin: function() {
+      onBeforeRenderingPlugin: async function () {
         this.PPD_BASE_URL = this.getPublicApiRestDataSourceUri() + '/pe/api/v1/process/processDefinitions/start?';
+        var oSelectionModel = this.getPodSelectionModel(),
+          oSelectedOrder = oSelectionModel.selectedOrderData;
+
+        let sSFC = oSelectedOrder.sfc || oSelectedOrder.sfcs[0].sfc;
+        this.selectedSFC = sSFC;
+
+        //If the plugin is embedde, pick the order and sfc from the embedded app
+        if (oSelectedOrder && oSelectedOrder.order && this.selectedSFC) {
+          // if(this.getPodSelectionModel().selectedPhaseData){
+          //Set the selected order
+          var oOrderInput = this.getView().byId('idOrderFilterInput');
+          oOrderInput.setValue(oSelectedOrder.order);
+          await this._loadOrderData(oSelectedOrder.order);
+
+          //Set and validate selected SFC
+          var oSelectInput = this.getView().byId('idSFCSelect');
+          // oSelectInput.setSelectedKey(oSelectedOrder.sfc);
+          oSelectInput.setSelectedKey(this.selectedSFC);
+          oSelectInput.setEnabled(false);
+          // this.selectedSFC = oSelectedOrder.sfc;
+          await this._getSfcData().then((oData) => {
+            if (oData.status.description !== 'ACTIVE') {
+              var oSfcInput = this.getView().byId('idSFCSelect');
+              oSfcInput.setValueState('Error');
+              // oSfcInput.setValueStateText(`SFC ${oSelectedOrder.sfc} is not in active status`);
+              // MessageBox.error(`SFC ${oSelectedOrder.sfc} is not in active status`)
+              oSfcInput.setValueStateText(`SFC ${this.selectedSFC} is not in active status`);
+              MessageBox.error(`SFC ${this.selectedSFC} is not in active status`);
+              return;
+            }
+          });
+
+          //Fire search to get data and hide clear button
+          var oFilterBar = this.getView().byId('idFilterBar');
+          oFilterBar.setShowClearOnFB(false);
+          oFilterBar.fireSearch();
+        }
       },
 
-      onBeforeRendering: function() {},
+      onBeforeRendering: function () {},
 
-      onAfterRendering: function() {},
+      onAfterRendering: function () {},
 
-      onExit: function() {
+      onExit: function () {
         if (PluginViewController.prototype.onExit) {
           PluginViewController.prototype.onExit.apply(this, arguments);
         }
       },
 
-      onClearFilterbarBtnPress: function() {
+      onClearFilterbarBtnPress: function () {
         var oView = this.getView();
 
         // Clear filter inputs
@@ -94,26 +131,26 @@ sap.ui.define(
         // }
       },
 
-      onOrderInputChange: function(oEvent) {
+      onOrderInputChange: function (oEvent) {
         var sOrderId = oEvent.getParameter('newValue');
         this._loadOrderData(sOrderId);
       },
 
-      onSFCSelectionChange: async function(oEvent) {
+      onSFCSelectionChange: async function (oEvent) {
         var sSFC = oEvent.getSource().getSelectedKey();
         this.selectedSFC = sSFC;
 
-        await this._getSfcData().then(oData => {
+        await this._getSfcData().then((oData) => {
           if (oData.status.description !== 'ACTIVE') {
             var oSfcInput = this.getView().byId('idSFCSelect');
             oSfcInput.setValueState('Error');
-            oSfcInput.setValueStateText(`SFC ${sOrderId} is not in active status`);
+            oSfcInput.setValueStateText(`SFC ${sSFC} is not in active status`);
             return;
           }
         });
       },
 
-      onFBSearch: function(oEvent) {
+      onFBSearch: function (oEvent) {
         var oFilterBar = oEvent.getSource();
         var oViewModel = this.getView().getModel('viewModel');
         var sOrderId = this.getView().byId('idOrderFilterInput').getValue();
@@ -140,7 +177,7 @@ sap.ui.define(
         // Show the footer
         oViewModel.setProperty('/isFiltersApplied', true);
 
-        this._getSfcData().then(oData => {
+        this._getSfcData().then((oData) => {
           if (oData.status.description === 'ACTIVE') {
             this.getView().byId('idOrderFilterInput').setEditable(false);
             this.getView().byId('idSFCSelect').setEditable(false);
@@ -153,39 +190,43 @@ sap.ui.define(
         });
       },
 
-      onSavePress: function(oEvent) {
+      onSavePress: function (oEvent) {
         var oView = this.getView(),
           oViewModel = oView.getModel('viewModel'),
           aLineItems = oViewModel.getProperty('/lineItems'),
           oOrderModel = oView.getModel('orderData'),
           oOrderData = oOrderModel.getProperty('/');
 
-        var aPayload = aLineItems.map(oItem => {
-          return {
-            active: oItem.InActive,
-            resource: oItem.resource,
-            correctionTime: oItem.correctionTime,
-            acceptanceDelay: oItem.acceptanceDelay,
-            plant: oOrderData.plant,
-            material: oOrderData.material.material,
-            seatNumber: oItem.InSeatNumber,
-            component: oItem.component,
-            operator: oItem.operator,
-            workcenter: oItem.workCenter
-          };
-        });
+        //Do not save non bom relevant items
+        var aPayload = aLineItems
+          .filter((oItem) => oItem.isBomRelevant)
+          .map((oItem) => {
+            return {
+              active: oItem.InActive,
+              resource: oItem.resource,
+              correctionTime: oItem.correctionTime,
+              acceptanceDelay: oItem.acceptanceDelay,
+              plant: oOrderData.plant,
+              material: oOrderData.material.material,
+              seatNumber: oItem.InSeatNumber,
+              component: oItem.component,
+              operator: oItem.operator,
+              workcenter: oItem.workCenter,
+              componentSequence: oItem.sequence,
+            };
+          });
 
         var sUrl = 'https://dbapicall.cfapps.eu20-001.hana.ondemand.com/api/massUpdate/assignenmentDetails';
 
         return new Promise((resolve, reject) => {
           this.ajaxPostRequest(sUrl, aPayload, resolve, reject);
-        }).then(aData => {
+        }).then((aData) => {
           //TODO: Decouple
           this.onCancelAssignmentsPress();
         });
       },
 
-      onTableItemsSelectionChange: function(oEvent) {
+      onTableItemsSelectionChange: function (oEvent) {
         var oTable = oEvent.getSource(),
           oSelectedItem = oEvent.getParameter('listItem'),
           oSelectedContext = oSelectedItem.getBindingContext('viewModel'),
@@ -200,7 +241,7 @@ sap.ui.define(
       },
 
       //TODO: Recheck
-      onAssignedOperatorIdChange: function(oEvent) {
+      onAssignedOperatorIdChange: function (oEvent) {
         var oControl = oEvent.getSource(),
           dupComponent,
           resource;
@@ -216,7 +257,7 @@ sap.ui.define(
         var sCurrentPath = oLineItemContext.getPath();
 
         // Check if operator is already assigned in another row
-        var bDuplicate = aLineItems.some(function(oItem, index) {
+        var bDuplicate = aLineItems.some(function (oItem, index) {
           var sItemPath = '/lineItems/' + index;
           if (oItem.isBomRelevant && sItemPath !== sCurrentPath && oItem.operator === sNewOperator) {
             dupComponent = oItem.component;
@@ -242,7 +283,7 @@ sap.ui.define(
         }
 
         this._getOperatorOccupancy(sOperatorId).then(
-          function(oResponse) {
+          function (oResponse) {
             //If outOperator array is empty, then operator does not have another assignment. No error
             if (oResponse.outOperator.length === 0) {
               return;
@@ -258,7 +299,7 @@ sap.ui.define(
       },
 
       //TODO: Update checks and validations
-      onAssignedResourceChanged: async function(oEvent) {
+      onAssignedResourceChanged: async function (oEvent) {
         var oControl = oEvent.getSource(),
           oViewModel = this.getView().getModel('viewModel');
 
@@ -309,7 +350,7 @@ sap.ui.define(
           dupComponent;
         var sNewResource = oSelectedItem.getKey();
         var sCurrentPath = oControl.getBindingContext('viewModel').getPath();
-        var bDuplicate = aLineItems.some(function(oItem, index) {
+        var bDuplicate = aLineItems.some(function (oItem, index) {
           var sItemPath = '/lineItems/' + index;
           if (oItem.isBomRelevant && sItemPath !== sCurrentPath && oItem.resource === sNewResource) {
             dupComponent = oItem.component;
@@ -330,9 +371,9 @@ sap.ui.define(
           InMaterial: selectedObject.component,
           InOrder: oOrderData.order,
           InPlant: oOrderData.plant,
-          InMaterialVersion: selectedObject.componentVersion
+          InMaterialVersion: selectedObject.componentVersion,
         };
-        this._getManagedBatchData(oPayload).then(data => {
+        this._getManagedBatchData(oPayload).then((data) => {
           if (!data.outInventoryId) {
             oControl.setSelectedKey(''); // Reset Select field
             MessageBox.error('The selected component is not batch managed.');
@@ -356,19 +397,22 @@ sap.ui.define(
           }
 
           this._getResourceOccupancy(oResourceData.resource)
-            .then(oResourceOccupancy => {
+            .then((oResourceOccupancy) => {
               if (oResourceOccupancy['State_Signal'] !== 0) {
                 ErrorHandler.setErrorState(
                   oControl,
                   this.getI18nText('resourceHasExistingOperatorAssignmentErrMsg', [
                     oResourceData.resource,
-                    oResourceOccupancy.OperatorName
+                    oResourceOccupancy.OperatorName,
                   ]),
                   'selectedKey'
                 );
 
                 return;
               }
+
+              // Reset current resource assignment
+              oViewModel.setProperty(oSelectedContext.getPath() + '/currentResourceAssignment', null);
 
               // Auto-Populate Fields
               oViewModel.setProperty(oSelectedContext.getPath() + '/resourceType', oResourceData.types);
@@ -380,24 +424,24 @@ sap.ui.define(
               // Set selected resource to line item
               this._setLineItemResourceData(oViewModel, oSelectedContext.getPath(), oResourceData);
             })
-            .catch(oError => {
+            .catch((oError) => {
               ErrorHandler.setErrorState(oControl, this.getI18nText('invalidResource'), 'selectedKey');
               MessageBox.error(this.getI18nText('couldNotFetchResourceOccupancy', [oResourceData.resource]));
             });
         });
       },
 
-      onAutoAcceptanceDelayChange: function(oEvent) {
+      onAutoAcceptanceDelayChange: function (oEvent) {
         var oContext = oEvent.getSource().getBindingContext('viewModel');
         this._markItemAsDirty(oContext);
       },
 
-      onCorrectionTimeInputChange: function(oEvent) {
+      onCorrectionTimeInputChange: function (oEvent) {
         var oContext = oEvent.getSource().getBindingContext('viewModel');
         this._markItemAsDirty(oContext);
       },
 
-      onAutoAcceptanceModeChange: function(oEvent) {
+      onAutoAcceptanceModeChange: function (oEvent) {
         var oViewModel = this.getView().getModel('viewModel'),
           oContext = oEvent.getSource().getBindingContext('viewModel'),
           sPath = oContext.getPath(),
@@ -415,12 +459,12 @@ sap.ui.define(
         this._markItemAsDirty(oContext);
       },
 
-      onCancelAssignmentsPress: function(oEvent) {
+      onCancelAssignmentsPress: function (oEvent) {
         this._getAssignmentData(this.selectedOrder.order);
         this.getView().getModel('viewModel').setProperty('/isDirty', false);
       },
 
-      onSaveAssignmentsPress: function(oEvent) {
+      onSaveAssignmentsPress: function (oEvent) {
         var oViewModel = this.getView().getModel('viewModel');
         var aLineItems = oViewModel.getProperty('/lineItems');
 
@@ -435,7 +479,7 @@ sap.ui.define(
         if (aSelectedItems.length === 0) return;
 
         //Validate seelcted items
-        aSelectedItems.forEach(oItem => {
+        aSelectedItems.forEach((oItem) => {
           var oData = oItem.getBindingContext('viewModel').getObject(),
             aCells = oItem.getCells();
 
@@ -461,7 +505,7 @@ sap.ui.define(
 
           //Check if the operator is unique in the table
           var oOtherAssignment = aLineItems.find(
-            oLineItem => oLineItem.isBomRelevant && oLineItem.operator === oData.operator && oLineItem.InSeatNumber !== oData.InSeatNumber
+            (oLineItem) => oLineItem.isBomRelevant && oLineItem.operator === oData.operator && oLineItem.InSeatNumber !== oData.InSeatNumber
           );
           if (oOtherAssignment) {
             ErrorHandler.setErrorState(
@@ -469,7 +513,7 @@ sap.ui.define(
               this.getI18nText('operatorAlreadyAssignedToComponentErrMsg', [
                 oData.operator,
                 oOtherAssignment.component,
-                oOtherAssignment.resource
+                oOtherAssignment.resource,
               ])
             );
           }
@@ -489,11 +533,11 @@ sap.ui.define(
           return MessageBox.error(this.getI18nText('fixErrorsBeforeSaveErrMsg'));
         }
 
-        var aItemsForServiceCall = aSelectedItems.map(oItem => oItem.getBindingContext('viewModel').getObject());
+        var aItemsForServiceCall = aSelectedItems.map((oItem) => oItem.getBindingContext('viewModel').getObject());
         this._saveResourceAssignments(aItemsForServiceCall);
       },
 
-      onRevokeResouceBtnPress: function(oEvent) {
+      onRevokeResouceBtnPress: function (oEvent) {
         var oTable = this.getView().byId('idMassOpAsmtTable'),
           aSelectedItems = oTable.getSelectedItems();
 
@@ -505,15 +549,15 @@ sap.ui.define(
 
           acc.push({
             resource: oSelectedRowData.resource,
-            path: sPath
+            path: sPath,
           });
           return acc;
         }, []);
 
-        var aPromises = aItemsForServiceCall.map(oItem => {
+        var aPromises = aItemsForServiceCall.map((oItem) => {
           var oViewModel = this.getView().getModel('viewModel');
           return this._revokeResource(oItem.resource).then(
-            function() {
+            function () {
               this._setLineItemResourceData(oViewModel, oItem.path, {}, true);
 
               //Clear any current assignment when resource is revoked
@@ -543,19 +587,22 @@ sap.ui.define(
         // );
 
         Promise.allSettled(aPromises).then(
-          function(aResponses) {
+          function (aResponses) {
             oTable.removeSelections(true);
           }.bind(this)
         );
       },
 
-      onAddResouceBtnPress: function(oEvent) {
+      onAddResouceBtnPress: function (oEvent) {
         // Get the context of the selected row from the event
         var oSelectedRowContext = oEvent.getSource().getBindingContext('viewModel');
         var oSelectedRowData = oSelectedRowContext.getObject();
-        var aSameComponent = this.getView().getModel('viewModel').getProperty('/lineItems').filter(oItem => {
-          return oItem.component === oSelectedRowData.component;
-        });
+        var aSameComponent = this.getView()
+          .getModel('viewModel')
+          .getProperty('/lineItems')
+          .filter((oItem) => {
+            return oItem.component === oSelectedRowData.component && oItem.COMPONENT_SEQUENCE === oSelectedRowData.COMPONENT_SEQUENCE;
+          });
 
         // Create a new row with the same component details
         var oNewRowItem = {
@@ -574,7 +621,7 @@ sap.ui.define(
           correctionTime: 3000,
           lastModified: '',
           InSeatNumber: aSameComponent[0].InSeatNumber + aSameComponent.length,
-          InActive: 0
+          InActive: 0,
         };
 
         // Add the new row to the line items
@@ -587,7 +634,7 @@ sap.ui.define(
         oModel.refresh(true);
       },
 
-      onClearResourceBtnPress: function(oEvent) {
+      onClearResourceBtnPress: function (oEvent) {
         // Get the context of the selected row from the event
         var oSelectedRowContext = oEvent.getSource().getBindingContext('viewModel');
 
@@ -605,7 +652,7 @@ sap.ui.define(
           autoAcceptance: true,
           acceptanceDelay: 1,
           correctionTime: 3000,
-          lastModified: ''
+          lastModified: '',
         });
 
         // Update the model with the cleared data for the selected row
@@ -616,7 +663,7 @@ sap.ui.define(
         oModel.refresh(true);
       },
 
-      onDeleteResourceBtnPress: function(oEvent) {
+      onDeleteResourceBtnPress: function (oEvent) {
         // Get the context of the selected row from the event
         var oSelectedRowContext = oEvent.getSource().getBindingContext('viewModel');
 
@@ -638,7 +685,7 @@ sap.ui.define(
 
         // Ensure at least one row per BOM component remains
         var sComponent = oSelectedRowData.component;
-        var aComponentRows = aLineItems.filter(oRow => oRow.component === sComponent);
+        var aComponentRows = aLineItems.filter((oRow) => oRow.component === sComponent);
 
         if (aComponentRows.length <= 1) {
           sap.m.MessageToast.show('At least one row per BOM component must remain.');
@@ -647,11 +694,11 @@ sap.ui.define(
 
         // Remove the selected row from the line items
         // var iIndex = aLineItems.findIndex(oRow => oRow === oSelectedRowData);
-        let aSameCompData = aLineItems.filter(oItem => {
+        let aSameCompData = aLineItems.filter((oItem) => {
           return oSelectedRowData.component === oItem.component;
         });
 
-        var iIndex = aLineItems.findIndex(oRow => oRow.InSeatNumber === aSameCompData[aSameCompData.length - 1].InSeatNumber);
+        var iIndex = aLineItems.findIndex((oRow) => oRow.InSeatNumber === aSameCompData[aSameCompData.length - 1].InSeatNumber);
         if (iIndex !== -1) {
           aLineItems.splice(iIndex, 1);
         }
@@ -661,7 +708,7 @@ sap.ui.define(
         oModel.updateBindings(true);
       },
 
-      onPauseBtnPress: function(oEvent) {
+      onPauseBtnPress: function (oEvent) {
         let oSource = oEvent.getSource();
         var oSelectedRowContext = oEvent.getSource().getBindingContext('viewModel');
         var sPath = oSelectedRowContext.getPath();
@@ -677,7 +724,7 @@ sap.ui.define(
         }
       },
 
-      onActiveStautsBtnPress: function(oEvent) {
+      onActiveStautsBtnPress: function (oEvent) {
         let oSource = oEvent.getSource();
         var oSelectedRowContext = oEvent.getSource().getBindingContext('viewModel');
         var sPath = oSelectedRowContext.getPath();
@@ -691,21 +738,21 @@ sap.ui.define(
         }
       },
 
-      getGroupHeader: function(oGroup) {
+      getGroupHeader: function (oGroup) {
         if (oGroup && oGroup.key) {
           return new sap.m.GroupHeaderListItem({
             title: 'BOM Relevant',
-            upperCase: true
+            upperCase: true,
           });
         } else {
           return new sap.m.GroupHeaderListItem({
             title: 'Not BOM Relevant',
-            upperCase: true
+            upperCase: true,
           });
         }
       },
 
-      _resetModels: function() {
+      _resetModels: function () {
         var oViewModel = this.getView().getModel('viewModel'),
           oOrderDataModel = this.getView().getModel('orderData'),
           oRecipeModel = this.getView().getModel('recipeData'),
@@ -717,19 +764,19 @@ sap.ui.define(
         if (oGrModel) oGrModel.setData([]);
       },
 
-      _markItemAsDirty: function(oContext) {
+      _markItemAsDirty: function (oContext) {
         var oObject = oContext.getObject();
         oObject.isDirty = true;
         var oViewModel = this.getView().getModel('viewModel');
         oViewModel.setProperty('/isDirty', true);
       },
 
-      _loadOrderData: function(sOrderId) {
-        this._getOrderDetails(sOrderId).then(oOrderData => {
+      _loadOrderData: function (sOrderId) {
+        return this._getOrderDetails(sOrderId).then((oOrderData) => {
           this.selectedOrder = oOrderData;
-          var aSFCs = oOrderData.sfcs.map(sSFC => {
+          var aSFCs = oOrderData.sfcs.map((sSFC) => {
             return {
-              sfc: sSFC
+              sfc: sSFC,
             };
           });
 
@@ -751,76 +798,76 @@ sap.ui.define(
         });
       },
 
-      _getOrderDetails: function(sOrderId) {
+      _getOrderDetails: function (sOrderId) {
         var sUrl = this.getPublicApiRestDataSourceUri() + 'order/v1/orders';
         var oParameters = {
           plant: this.getPodController().getUserPlant(),
-          order: sOrderId
+          order: sOrderId,
         };
 
         return new Promise((resolve, reject) => {
           this.ajaxGetRequest(
             sUrl,
             oParameters,
-            function(oData) {
+            function (oData) {
               if (oData && oData.bom && oData.bom.bom) {
                 resolve(oData);
               } else {
                 reject('Order API response does not contain BOM data.');
               }
             },
-            function(oError) {
+            function (oError) {
               reject(oError);
             }
           );
         });
       },
 
-      _getWorkCenterData: function(aWorkCenters) {
-        var aPromises = aWorkCenters.map(oWorkCenter => {
+      _getWorkCenterData: function (aWorkCenters) {
+        var aPromises = aWorkCenters.map((oWorkCenter) => {
           return new Promise((resolve, reject) => {
             var sUrl = this.getPublicApiRestDataSourceUri() + 'workcenter/v2/workcenters';
             var oParameters = {
               plant: this.getPodController().getUserPlant(),
-              workCenter: oWorkCenter
+              workCenter: oWorkCenter,
             };
             this.ajaxGetRequest(sUrl, oParameters, resolve, reject);
           });
         });
 
-        Promise.all(aPromises).then(aResponse => {
-          aResponse.map(oResponse => {
+        Promise.all(aPromises).then((aResponse) => {
+          aResponse.map((oResponse) => {
             this.workCenters[oResponse[0].workCenter] = oResponse[0];
           });
         });
       },
 
-      _getResourceData: function() {
+      _getResourceData: function () {
         var sUrl = this.getPublicApiRestDataSourceUri() + '/resource/v2/resources';
         var oParamters = {
-          plant: this.getPodController().getUserPlant()
+          plant: this.getPodController().getUserPlant(),
         };
         return new Promise((resolve, reject) => this.ajaxGetRequest(sUrl, oParamters, resolve, reject));
       },
 
-      _getOrderRoutingData: function(sRecipeId, sRecipeType = 'SHOP_ORDER') {
+      _getOrderRoutingData: function (sRecipeId, sRecipeType = 'SHOP_ORDER') {
         var sUrl = this.getPublicApiRestDataSourceUri() + '/recipe/v1/recipes';
         var oParamters = {
           plant: this.getPodController().getUserPlant(),
           recipe: sRecipeId,
-          recipeType: sRecipeType
+          recipeType: sRecipeType,
         };
         return new Promise((resolve, reject) => this.ajaxGetRequest(sUrl, oParamters, resolve, reject));
       },
 
-      _getAssignmentData: async function() {
+      _getAssignmentData: async function () {
         ErrorHandler.clearAllErrors();
 
         //Get resource information
-        var oResourcePromise = this._getResourceData().then(aResourceList => {
+        var oResourcePromise = this._getResourceData().then((aResourceList) => {
           //Consider only resources of type PORTIONING or FORMULATION
-          var aValidResources = aResourceList.filter(oResource =>
-            oResource.types.find(oType => oType.type === 'PORTIONING' || oType.type === 'FORMULATION')
+          var aValidResources = aResourceList.filter((oResource) =>
+            oResource.types.find((oType) => oType.type === 'PORTIONING' || oType.type === 'FORMULATION')
           );
 
           var aResources = this._createCustomDataObject(aValidResources);
@@ -840,7 +887,7 @@ sap.ui.define(
         var oExistingAsmtPromise = this._getAssignmentDataHANADB();
 
         //Get BOM details for order
-        var oBomDataPromise = this._getBomData(this.selectedOrder.bom.bom, this.selectedOrder.bom.type).then(aBomData => {
+        var oBomDataPromise = this._getBomData(this.selectedOrder.bom.bom, this.selectedOrder.bom.type).then((aBomData) => {
           if (aBomData && aBomData.length === 0) {
             console.error('Could not load BOM information');
             return;
@@ -859,7 +906,7 @@ sap.ui.define(
         // this._getOrderRoutingData(this.selectedOrder.order)
         Promise.all([oResourcePromise, oExistingAsmtPromise, oBomDataPromise, oRoutingDataPromise])
           .then(
-            function(aResponse) {
+            function (aResponse) {
               var aResourceList = aResponse[0],
                 aExistingAssignments = aResponse[1],
                 aRecipeData = aResponse[3];
@@ -867,43 +914,43 @@ sap.ui.define(
             }.bind(this)
           )
           .then(
-            function(aLineItems) {
+            function (aLineItems) {
               var oMaterials = aLineItems.reduce((acc, val) => {
                 acc[val.component] = '';
                 return acc;
               }, {});
 
               var aMaterials = Object.keys(oMaterials);
-              var aPromises = aMaterials.map(oMaterial => this._getDetailsForMaterial(oMaterial));
+              var aPromises = aMaterials.map((oMaterial) => this._getDetailsForMaterial(oMaterial));
               Promise.all(aPromises).then(this._handleMaterialDataFetch.bind(this));
             }.bind(this)
           )
-          .then(function() {}.bind(this));
+          .then(function () {}.bind(this));
       },
 
-      _getAssignmentDataHANADB: function() {
+      _getAssignmentDataHANADB: function () {
         var sUrl = 'https://dbapicall.cfapps.eu20-001.hana.ondemand.com/api/get/assignmentDetails';
         var orderData = this.getView().getModel('orderData').getData();
         // var oViewData = this.getView().getModel('viewModel').getData().lineItems1[0];
         var oPayload = {
           plant: orderData.plant,
-          material: orderData.material.material
+          material: orderData.material.material,
           // workcenter: oViewData.workCenter
         };
 
         return new Promise((resolve, reject) => this.ajaxPostRequest(sUrl, oPayload, resolve, reject));
       },
 
-      _getSfcData: function() {
+      _getSfcData: function () {
         var sUrl = this.getPublicApiRestDataSourceUri() + '/sfc/v1/sfcdetail';
         var oParamters = {
           plant: this.getPodController().getUserPlant(),
-          sfc: this.selectedSFC
+          sfc: this.selectedSFC,
         };
         return new Promise((resolve, reject) => this.ajaxGetRequest(sUrl, oParamters, resolve, reject));
       },
 
-      _getDetailsForMaterial: function(sMaterial) {
+      _getDetailsForMaterial: function (sMaterial) {
         var sUrl =
           this.getProductDataSourceUri() +
           "Materials?$select=ref,material,description,version&$filter=(material eq '" +
@@ -911,31 +958,31 @@ sap.ui.define(
           "' and currentVersion eq true)";
         var oParameters = {};
         return new Promise((resolve, reject) => this.ajaxGetRequest(sUrl, oParameters, resolve, reject)).then(
-          oResponse => oResponse.value[0]
+          (oResponse) => oResponse.value[0]
         );
       },
 
-      _getBomData: function(sBomId, sBomType = 'SHOP_ORDER') {
+      _getBomData: function (sBomId, sBomType = 'SHOP_ORDER') {
         var sUrl = this.getPublicApiRestDataSourceUri() + 'bom/v1/boms';
         var oParameters = {
           plant: this.getPodController().getUserPlant(),
           bom: sBomId,
-          type: sBomType
+          type: sBomType,
         };
         return new Promise((resolve, reject) => this.ajaxGetRequest(sUrl, oParameters, resolve, reject));
       },
 
       //TODO: Promisify
-      _getGRSummary: function() {
+      _getGRSummary: function () {
         var sUrl = this.getInventoryDataSourceUri() + 'order/goodsReceipt/summary';
         var oParameters = {
           sfc: this.selectedSFC,
-          shopOrder: this.selectedOrder.order
+          shopOrder: this.selectedOrder.order,
         };
         this.ajaxGetRequest(
           sUrl,
           oParameters,
-          function(oResponse) {
+          function (oResponse) {
             var oData = {
               receivedQuantity: oResponse.receivedQuantity.value,
               targetQuantity: oResponse.targetQuantity.value,
@@ -943,7 +990,7 @@ sap.ui.define(
 
               sfcReceivedQuantity: oResponse.lineItems[0].receivedQuantity.value,
               sfcTargetQuantity: oResponse.lineItems[0].targetQuantity.value,
-              sfcUnitOfMeasure: oResponse.lineItems[0].receivedQuantity.unitOfMeasure.uom
+              sfcUnitOfMeasure: oResponse.lineItems[0].receivedQuantity.unitOfMeasure.uom,
             };
 
             this.getView().getModel('grModel').setData(oData);
@@ -951,36 +998,36 @@ sap.ui.define(
         );
       },
 
-      _getManagedBatchData: function(oPayload) {
+      _getManagedBatchData: function (oPayload) {
         var sUrl = this.PPD_BASE_URL + 'key=REG_eea6a337-72e0-4213-bab1-3e12d5127a79&async=false';
         return new Promise((resolve, reject) => this.ajaxPostRequest(sUrl, oPayload, resolve, reject));
       },
 
-      _getResourceListForWorkCenter: function(aMembers) {
+      _getResourceListForWorkCenter: function (aMembers) {
         var aResourceList = this.getView().getModel('resourceData').getProperty('/');
 
-        return aResourceList.filter(oResource => {
-          var isValidResource = oResource.types.find(oType => oType.type === 'PORTIONING' || oType.type === 'FORMULATION') ? true : false;
+        return aResourceList.filter((oResource) => {
+          var isValidResource = oResource.types.find((oType) => oType.type === 'PORTIONING' || oType.type === 'FORMULATION') ? true : false;
           if (!isValidResource) return false;
 
-          var isWorkCenterMember = aMembers.find(oMember => oMember.resource.resource === oResource.resource);
+          var isWorkCenterMember = aMembers.find((oMember) => oMember.resource.resource === oResource.resource);
           if (!isWorkCenterMember) return false;
 
           return true;
         });
       },
 
-      _getResourceOccupancy: function(sResourceId) {
+      _getResourceOccupancy: function (sResourceId) {
         //AD_MT_HANDSHAKE_imported - CPP_testResourceOccupancy
         // var sUrl = this.PPD_BASE_URL + 'key=REG_f22f235e-1e89-4553-b952-7ac229b79065&async=false';
         //AD_MT_HANDSHAKE_CURRENT - CPP_testResourceOccupancy
         var sUrl = this.PPD_BASE_URL + 'key=REG_b307a904-2555-450f-94b1-c3621a7835b4&async=false';
         var oPayload = {
           InPlant: this.getPodController().getUserPlant(),
-          InResource: sResourceId
+          InResource: sResourceId,
         };
 
-        return new Promise((resolve, reject) => this.ajaxPostRequest(sUrl, oPayload, resolve, reject)).then(function(oResponse) {
+        return new Promise((resolve, reject) => this.ajaxPostRequest(sUrl, oPayload, resolve, reject)).then(function (oResponse) {
           return oResponse.indicatorOutput.reduce((acc, val) => {
             acc[val.referenceName] = val.value;
             return acc;
@@ -988,36 +1035,36 @@ sap.ui.define(
         });
       },
 
-      _getOperatorOccupancy: function(sOperatorId) {
+      _getOperatorOccupancy: function (sOperatorId) {
         //AD_MT_HANDSHAKE_imported  - CPP_testOperatorOccupancy
         // var sUrl = this.PPD_BASE_URL + 'key=REG_8f3da8b6-8b63-49a6-a45c-f13a029f7812&async=false';
         //AD_MT_HANDSHAKE_CURRENT  - CPP_testOperatorOccupancy
         var sUrl = this.PPD_BASE_URL + 'key=REG_5ce1f41f-1899-4ac1-87b2-1d2773a71fc8&async=false';
         var oPayload = {
-          InOperator: sOperatorId
+          InOperator: sOperatorId,
         };
 
         return new Promise((resolve, reject) => this.ajaxPostRequest(sUrl, oPayload, resolve, reject));
       },
 
-      _getResourceListForComponent: function(sOrderId, sSFC, sComponent) {
+      _getResourceListForComponent: function (sOrderId, sSFC, sComponent) {
         var oResourceModel = this.getView().getModel('resourceData'),
           aResourceList = oResourceModel.getProperty('/');
 
         return aResourceList.filter(
-          oResource =>
+          (oResource) =>
             oResource.customData.ORDER === sOrderId && oResource.customData.SFC === sSFC && oResource.customData.MATERIAL === sComponent
         );
       },
 
-      _getDetailsForResource: function(sResourceId) {
+      _getDetailsForResource: function (sResourceId) {
         var oResourceModel = this.getView().getModel('resourceData'),
           aResourceList = oResourceModel.getProperty('/');
-        return aResourceList.find(oResource => oResource.resource === sResourceId);
+        return aResourceList.find((oResource) => oResource.resource === sResourceId);
       },
 
-      _createCustomDataObject: function(aData) {
-        return aData.map(oItem => {
+      _createCustomDataObject: function (aData) {
+        return aData.map((oItem) => {
           var oCustomData = oItem.customValues.reduce((acc, val) => {
             acc[val.attribute] = val.value;
             return acc;
@@ -1028,13 +1075,13 @@ sap.ui.define(
         });
       },
 
-      _createTableLineItems: function(aData, aExistingAssignments) {
+      _createTableLineItems: function (aData, aExistingAssignments) {
         var oConfiguration = this.getConfiguration(),
           InSeatNumber = 0;
 
-        var aRecipeItems = aData.flatMap(recipe =>
-          recipe.phases.flatMap(phase =>
-            phase.recipePhaseComponentList.map(component => ({
+        var aRecipeItems = aData.flatMap((recipe) =>
+          recipe.phases.flatMap((phase) =>
+            phase.recipePhaseComponentList.map((component) => ({
               isDirty: false,
               isNew: true,
               isBomRelevant: true,
@@ -1063,7 +1110,9 @@ sap.ui.define(
               InSeatNumber: 0,
               InActive: 0,
               WORK_CENTER: phase.workCenter,
-              COMPONENT: component.bomComponent.material.material
+              COMPONENT: component.bomComponent.material.material,
+              COMPONENT_SEQUENCE: component.bomComponent.sequence,
+              batchNumber: this.oBomComponentsMap[component.bomComponent.material.material].batchNumber || 'NA',
             }))
           )
         );
@@ -1071,13 +1120,13 @@ sap.ui.define(
         var aLineItems = [];
         if (aExistingAssignments.length === 0) {
           aLineItems = aRecipeItems;
-          aLineItems.forEach(oLineItem => {
+          aLineItems.forEach((oLineItem) => {
             var oBomComponent = this.oBomComponentsMap[oLineItem.component];
             oLineItem.isUnitValid = oBomComponent && (oBomComponent.unitOfMeasure === 'KG' || oBomComponent.unitOfMeasure === 'G');
             oLineItem.isDeletable = false;
           });
         } else {
-          aLineItems = this._mergeArrayByKeys(aRecipeItems, aExistingAssignments, ['WORK_CENTER', 'COMPONENT']);
+          aLineItems = this._mergeArrayByKeys(aRecipeItems, aExistingAssignments, ['WORK_CENTER', 'COMPONENT', 'COMPONENT_SEQUENCE']);
         }
 
         //If component does not have seat number, assign the highest sequence
@@ -1088,29 +1137,31 @@ sap.ui.define(
 
         if (iLastSequenceNo === 0) iLastSequenceNo = 1;
 
-        aLineItems.filter(oItem => oItem.isBomRelevant && oItem.isUnitValid).forEach(oItem => {
-          if (oItem.InSeatNumber === 0) {
-            var iNextSequence = Math.ceil((iLastSequenceNo + 1) / 100) * 100;
-            oItem.InSeatNumber = iNextSequence;
-            iLastSequenceNo = iNextSequence + 1;
-          }
-        });
+        aLineItems
+          .filter((oItem) => oItem.isBomRelevant && oItem.isUnitValid)
+          .forEach((oItem) => {
+            if (oItem.InSeatNumber === 0) {
+              var iNextSequence = Math.ceil((iLastSequenceNo + 1) / 100) * 100;
+              oItem.InSeatNumber = iNextSequence;
+              iLastSequenceNo = iNextSequence + 1;
+            }
+          });
 
         this.getView().getModel('viewModel').setProperty('/lineItems1', aLineItems);
 
         return aLineItems;
       },
 
-      _mergeArrayByKeys: function(aRecipeData, aExistingAssignments, aKeys) {
+      _mergeArrayByKeys: function (aRecipeData, aExistingAssignments, aKeys) {
         var oRecipeMap = new Map();
 
         function getKey(obj) {
-          return aKeys.map(key => obj[key]).join('|');
+          return aKeys.map((key) => obj[key]).join('|');
         }
 
         var aLineItems = [];
-        aRecipeData.forEach(oRecipe => oRecipeMap.set(getKey(oRecipe), { ...oRecipe }));
-        aExistingAssignments.forEach(oAssmt => {
+        aRecipeData.forEach((oRecipe) => oRecipeMap.set(getKey(oRecipe), { ...oRecipe }));
+        aExistingAssignments.forEach((oAssmt) => {
           var sKey = getKey(oAssmt);
           var oLineItem;
 
@@ -1135,7 +1186,7 @@ sap.ui.define(
               InActive: oAssmt.ACTIVE,
               resourceType: '',
               resourceLastModifiedAt: '',
-              asset: ''
+              asset: '',
             };
           } else {
             //Not matched scenario - Not BOM Relevant
@@ -1163,7 +1214,8 @@ sap.ui.define(
               workCenter: oAssmt.WORK_CENTER,
               workCenterDesc: '',
               phaseId: '',
-              resourceList: this.resourceList
+              resourceList: this.resourceList,
+              sequence: oAssmt.COMPONENT_SEQUENCE,
             };
           }
           var oResource = this._getDetailsForResource(oAssmt.RESOURCE);
@@ -1178,9 +1230,9 @@ sap.ui.define(
           aLineItems.push(oLineItem);
         });
 
-        aRecipeData.forEach(oRecipeItem => {
+        aRecipeData.forEach((oRecipeItem) => {
           var sKey = getKey(oRecipeItem);
-          if (!aExistingAssignments.some(oAssmt => getKey(oAssmt) === sKey)) {
+          if (!aExistingAssignments.some((oAssmt) => getKey(oAssmt) === sKey)) {
             var oBomComponent = this.oBomComponentsMap[oRecipeItem.component];
             oRecipeItem.isUnitValid = oBomComponent && (oBomComponent.unitOfMeasure === 'KG' || oBomComponent.unitOfMeasure === 'G');
             aLineItems.push(oRecipeItem);
@@ -1190,7 +1242,7 @@ sap.ui.define(
         return aLineItems;
       },
 
-      _handleMaterialDataFetch: async function(aMaterials) {
+      _handleMaterialDataFetch: async function (aMaterials) {
         //Create a map from the service response for material details
         this.materialsList = aMaterials.reduce((acc, val) => {
           if (!val) return acc;
@@ -1210,11 +1262,13 @@ sap.ui.define(
         this._checkResourceAssignments();
       },
 
-      _assignResource: function(oItem) {
+      _assignResource: function (oItem) {
         //AD_MT_HANDSHAKE_imported - CPP_assignOperator
         // var sUrl = this.PPD_BASE_URL + 'key=REG_e64981d3-2a78-4751-8e86-f796485f1db5&async=false';
         //AD_MT_HANDSHAKE_CURRENT - CPP_assignOperator
-        var sUrl = this.PPD_BASE_URL + 'key=REG_2f6052ea-915e-4f89-9e23-40b261aa40f7&async=false';
+        // var sUrl = this.PPD_BASE_URL + 'key=REG_2f6052ea-915e-4f89-9e23-40b261aa40f7&async=false';
+        //P_AD_MT_HANDSHAKE_CURRENT_V3_CPP_assignOperator -> /pe/api/v1/process/processDefinitions/start?key=REG_16f252e3-5f2b-4800-a13e-4f3b9b2375b4
+        var sUrl = this.PPD_BASE_URL + 'key=REG_16f252e3-5f2b-4800-a13e-4f3b9b2375b4&async=false';
 
         var oPayload = {
           InOrderStatus: this.selectedOrder.executionStatus,
@@ -1233,30 +1287,31 @@ sap.ui.define(
           InOrderBO: this.selectedOrder.order,
           InOperationActivity: oItem.operationActivity,
           InUOM: 'KG', //TODO: Capture from bom component
-          InERPSequence: oItem.sequence,
+          // InERPSequence: oItem.sequence,
+          InLocalSequence: oItem.sequence,
           InBOM: this.selectedOrder.bom.bom,
           InMaterialVersion: oItem.componentVersion,
           InBOMVersion: this.selectedOrder.bom.version,
           InCorrectionTime: oItem.correctionTime,
-          InSeatNumber: oItem.InSeatNumber
+          InSeatNumber: oItem.InSeatNumber,
         };
 
         return new Promise((resolve, reject) => this.ajaxPostRequest(sUrl, oPayload, resolve, reject));
       },
 
-      _revokeResource: function(sResourceId) {
+      _revokeResource: function (sResourceId) {
         //AD_MT_HANDSHAKE_imported - CPP_unAssignOperator
         // var sUrl = this.PPD_BASE_URL + 'key=REG_c245216f-4e25-4b85-8593-ed44db51a531&async=false';
         //AD_MT_HANDSHAKE_CURRENT - CPP_unAssignOperator
         var sUrl = this.PPD_BASE_URL + 'key=REG_f22a85b1-89c5-40cb-b8ca-98f4a37eefe4&async=false';
         var oPayload = {
           InPlant: this.getPodController().getUserPlant(),
-          InResource: sResourceId
+          InResource: sResourceId,
         };
         return new Promise((resolve, reject) => this.ajaxPostRequest(sUrl, oPayload, resolve, reject));
       },
 
-      _saveResourceAssignments: function(aItems) {
+      _saveResourceAssignments: function (aItems) {
         var aPromises = [];
 
         for (var i = 0; i < aItems.length; i++) {
@@ -1265,7 +1320,7 @@ sap.ui.define(
         }
 
         Promise.allSettled(aPromises).then(
-          function() {
+          function () {
             // Clearing Table selections
             this.getView().byId('idMassOpAsmtTable').removeSelections();
             this._getAssignmentData(this.selectedOrder.order);
@@ -1274,7 +1329,7 @@ sap.ui.define(
         );
       },
 
-      _setLineItemResourceData: function(oModel, sPath, oResourceData, bNew) {
+      _setLineItemResourceData: function (oModel, sPath, oResourceData, bNew) {
         var oData = oModel.getProperty(sPath);
 
         oData = {
@@ -1283,7 +1338,7 @@ sap.ui.define(
           resourceType: oResourceData.types || '',
           lastModified: oResourceData.modifiedDateTime ? moment(oResourceData.modifiedDateTime).toDate() : '',
           resourceLastModifiedAt: oResourceData.modifiedDateTime ? moment(oResourceData.modifiedDateTime).toDate() : '',
-          asset: oResourceData.asset ? oResourceData.asset.name : ''
+          asset: oResourceData.asset ? oResourceData.asset.name : '',
         };
 
         //TODO: Get defaults from config
@@ -1299,15 +1354,15 @@ sap.ui.define(
         oModel.setProperty(sPath, oData);
       },
 
-      _checkResourceAssignments: async function() {
+      _checkResourceAssignments: async function () {
         var oViewModel = this.getView().getModel('viewModel'),
           aLineItems = oViewModel.getProperty('/lineItems');
 
-        var aPromises = aLineItems.map(async oItem => {
+        var aPromises = aLineItems.map(async (oItem) => {
           //Perform check only for BOM relevant items
           if (!oItem.isBomRelevant || !oItem.resource) return oItem;
 
-          var oResourceAssignment = await this._getResourceOccupancy(oItem.resource).catch(oError => {
+          var oResourceAssignment = await this._getResourceOccupancy(oItem.resource).catch((oError) => {
             oItem.isNew = true;
             console.error(oError);
             return;
@@ -1319,6 +1374,7 @@ sap.ui.define(
           //If the signal is zero, the resource is not currently assigned show as editable
           if (oResourceAssignment && oResourceAssignment['State_Signal'] === 0) {
             oItem.isNew = true;
+            oItem.currentResourceAssignment = null;
             // return oItem;
           } else if (
             oResCustomData.OPERATOR === oItem.operator &&
@@ -1333,7 +1389,7 @@ sap.ui.define(
             oItem.currentResourceAssignment = {
               order: oResCustomData.ORDER,
               component: oResCustomData.MATERIAL,
-              operator: oResCustomData.OPERATOR
+              operator: oResCustomData.OPERATOR,
             };
           }
 
@@ -1345,37 +1401,37 @@ sap.ui.define(
       },
 
       //TODO: Move below to formatter
-      autoAcceptanceFormatter: function(bIsAutoAcceptance) {
+      autoAcceptanceFormatter: function (bIsAutoAcceptance) {
         if (bIsAutoAcceptance) return 'auto';
         return 'manual';
       },
 
-      dateTimeFormatter: function(oDate) {
+      dateTimeFormatter: function (oDate) {
         if (!oDate) return;
         return moment(oDate).format('MMM DD, YYYY HH:mm:ss');
       },
 
-      formatRowEditable: function(bIsNew, bIsUnitValid, bIsBomRelevant) {
+      formatRowEditable: function (bIsNew, bIsUnitValid, bIsBomRelevant) {
         return bIsNew && bIsUnitValid && bIsBomRelevant;
       },
 
-      formatAddEnabled: function(bIsUnitValid, bIsBomRelevant) {
+      formatAddEnabled: function (bIsUnitValid, bIsBomRelevant) {
         return bIsUnitValid && bIsBomRelevant;
       },
 
-      formatRowEditable1: function(bIsUnitValid) {
+      formatRowEditable1: function (bIsUnitValid) {
         return bIsUnitValid;
       },
 
-      formatActiveBtn: function(iValue) {
+      formatActiveBtn: function (iValue) {
         if (iValue) return 'sap-icon://media-pause';
         else return 'sap-icon://media-play';
       },
 
-      getPercentValue: function(plannedQty, completedQty) {
-        let percentValue = parseFloat(completedQty) / parseFloat(plannedQty) * 100;
+      getPercentValue: function (plannedQty, completedQty) {
+        let percentValue = (parseFloat(completedQty) / parseFloat(plannedQty)) * 100;
         return Math.floor(percentValue);
-      }
+      },
     });
     return oPluginViewController;
   }

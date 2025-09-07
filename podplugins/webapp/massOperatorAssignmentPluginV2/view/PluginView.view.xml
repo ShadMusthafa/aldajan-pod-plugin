@@ -239,6 +239,7 @@
                             title="{viewModel>component}"
                             text="{viewModel>componentDesc}"
                         />
+                        <Text text="{viewModel>batchNumber}" />
                         <Text text="{viewModel>InSeatNumber}" />
                         <Select
                             forceSelection="false"
