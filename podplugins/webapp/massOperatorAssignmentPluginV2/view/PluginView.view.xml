@@ -6,12 +6,8 @@
     xmlns:f="sap.f"
     xmlns="sap.m"
     width="100%"
-    height="100%"
->
-    <f:DynamicPage
-        id="idMassOpAsmtPage"
-        showFooter="true"
-    >
+    height="100%">
+    <f:DynamicPage id="idMassOpAsmtPage" showFooter="true">
         <f:header>
             <f:DynamicPageHeader id="idMassOpAsmtDynHeader">
                 <filterbar:FilterBar
@@ -19,8 +15,7 @@
                     useToolbar="false"
                     showClearOnFB="true"
                     clear="onClearFilterbarBtnPress"
-                    search=".onFBSearch"
-                >
+                    search=".onFBSearch" >
                     <filterbar:filterGroupItems>
                         <filterbar:FilterGroupItem
                             id="idOrderSearch"
@@ -28,8 +23,7 @@
                             label="Order"
                             groupName="Group1"
                             mandatory="true"
-                            visibleInFilterBar="true"
-                        >
+                            visibleInFilterBar="true">
                             <filterbar:control>
                                 <Input
                                     id="idOrderFilterInput"
@@ -175,71 +169,36 @@
                     ],
                     filters:[{path:'isUnitValid', operator:'EQ', value1:true}],
                     groupHeaderFactory: '.getGroupHeader'
-                }"
-            >
+                }">
                 
                 <columns>
-                    <Column
-                        mergeDuplicates="false"
-                        mergeFunctionName="getTitle"
-                    >
-                        <Label design="Bold" wrapping="true" text="Work Center" />
-                    </Column>
-                    <Column
-                        mergeDuplicates="false"
-                        width="4rem"
-                    >
-                        <Label design="Bold" wrapping="true" text="Phase Id" />
-                    </Column>
-                    <Column
-                        mergeDuplicates="false"
-                        mergeFunctionName="getTitle"
-                    >
-                        <Label design="Bold" wrapping="true" text="Component" />
-                    </Column>
-                    <Column
-                        mergeDuplicates="false"
-                        width="5rem"
-                    >
-                        <Label design="Bold" wrapping="true" text="Seat Number" />
-                    </Column>
-                    <Column>
-                        <Label design="Bold" wrapping="true" text="Asset / Resource" />
-                    </Column>
-                    <Column>
-                        <Label design="Bold" wrapping="true" text="Resource Type" />
-                    </Column>
-                    <Column>
-                        <Label design="Bold" wrapping="true" text="Operator" />
-                    </Column>
-                    <Column>
-                        <Label design="Bold" wrapping="true" text="Acceptance Type" />
-                    </Column>
-                    <Column width="6rem">
-                        <Label design="Bold" wrapping="true" text="Acceptance Delay" />
-                    </Column>
-                    <Column width="6rem">
-                        <Label design="Bold" wrapping="true" text="Correction Time" />
-                    </Column>
-                    <Column>
-                        <Label design="Bold" wrapping="true" text="Last Modified" />
-                    </Column>
-                    <Column width="13rem">
-                        <Label design="Bold" wrapping="true" text="Actions" />
-                    </Column>
-                </columns>
+                    <Column><Label design="Bold" wrapping="true" text="Work Center" /></Column>
+                    <Column width="4rem"><Label design="Bold" wrapping="true" text="Phase Id" /></Column>
+                    <Column><Label design="Bold" wrapping="true" text="Component" /></Column>
+                    <Column><Label design="Bold" wrapping="true" text="Batch" /></Column>
+                    <Column><Label design="Bold" wrapping="true" text="Seat Number" /></Column>
+                    <Column><Label design="Bold" wrapping="true" text="Asset / Resource" /></Column>
+                    <Column><Label design="Bold" wrapping="true" text="Resource Type" /></Column>
+                    <Column><Label design="Bold" wrapping="true" text="Operator" /></Column>
+                    <Column><Label design="Bold" wrapping="true" text="Acceptance Type" /></Column>
+                    <Column><Label design="Bold" wrapping="true" text="Acceptance Delay" /></Column>
+                    <Column><Label design="Bold" wrapping="true" text="Correction Time" /></Column>
+                    <Column><Label design="Bold" wrapping="true" text="Last Modified" /></Column>
+                    <Column><Label design="Bold" wrapping="true" text="Actions" /></Column>
+                </columns>  
                 <items>
                     <ColumnListItem>
-                        <ObjectIdentifier
-                            title="{viewModel>workCenter}"
-                            text="{viewModel>workCenterDesc}"
-                        />
+                        <ObjectIdentifier title="{viewModel>workCenter}" text="{viewModel>workCenterDesc}" />
                         <Text text="{viewModel>phaseId}" />
-                        <ObjectIdentifier
-                            title="{viewModel>component}"
-                            text="{viewModel>componentDesc}"
-                        />
-                        <Text text="{viewModel>batchNumber}" />
+                        <ObjectIdentifier title="{viewModel>component}" text="{viewModel>componentDesc}" />
+                        <Input 
+                            value="{viewModel>batchNumber}"
+                            showValueHelp="true"
+                            valueHelpRequest=".onBatchValueHelpRequest"
+                            enabled="{
+                                parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
+                                formatter: '.formatRowEditable'
+                            }"/>
                         <Text text="{viewModel>InSeatNumber}" />
                         <Select
                             forceSelection="false"
@@ -251,8 +210,7 @@
                             }"
                             items="{viewModel>resourceList}"
                             selectedKey="{viewModel>resource}"
-                            change=".onAssignedResourceChanged"
-                        >
+                            change=".onAssignedResourceChanged">
                             <!-- <core:Item key="{resourceData>resource}" text="{resourceData>resource} {resourceData>description}"/> -->
                             <core:ListItem
                                 key="{viewModel>resource}"
@@ -271,13 +229,11 @@
                                 formatter: '.formatRowEditable'
                             }"
                             value="{viewModel>operator}"
-                            change=".onAssignedOperatorIdChange"
-                        >
+                            change=".onAssignedOperatorIdChange">
                             <suggestionItems>
                                 <core:ListItem
                                     key="{viewModel>userId}"
-                                    text="{viewModel>userId}"
-                                />
+                                    text="{viewModel>userId}" />
                             </suggestionItems>
                         </Input>
                         <SegmentedButton
@@ -289,17 +245,10 @@
                             selectedKey="{
                                 path: 'viewModel>autoAcceptance',
                                 formatter:'.autoAcceptanceFormatter'
-                            }"
-                        >
+                            }">
                             <items>
-                                <SegmentedButtonItem
-                                    key="auto"
-                                    text="Auto"
-                                />
-                                <SegmentedButtonItem
-                                    key="manual"
-                                    text="Manual"
-                                />
+                                <SegmentedButtonItem key="auto" text="Auto"/>
+                                <SegmentedButtonItem key="manual" text="Manual"/>
                             </items>
                         </SegmentedButton>
                         <Input
@@ -313,8 +262,7 @@
                                 
                             }"
                             editable="{= ${viewModel>autoAcceptance} &amp;&amp; ${viewModel>isNew}}"
-                            change=".onAutoAcceptanceDelayChange"
-                        />
+                            change=".onAutoAcceptanceDelayChange"/>
                         <Input
                             enabled="{
                                 parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
@@ -326,14 +274,12 @@
                                
                             }"
                             editable="{= ${viewModel>autoAcceptance} &amp;&amp; ${viewModel>isNew}}"
-                            change=".onCorrectionTimeInputChange"
-                        />
-                        <Text
+                            change=".onCorrectionTimeInputChange" />
+                        <Text 
                             text="{
                                 path: 'viewModel>lastModified',
                                 formatter: '.dateTimeFormatter'
-                            }"
-                        />
+                            }" />
                         <HBox>
                             <Button
                                 text="Add"
@@ -341,16 +287,14 @@
                                 enabled="{
                                     parts:['viewModel>isUnitValid', 'viewModel>isBomRelevant'],
                                     formatter: '.formatAddEnabled'
-                                }"
-                            />
+                                }"/>
                             <Button
                                 text="Clear"
                                 press=".onClearResourceBtnPress"
                                 enabled="{
                                     parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
                                     formatter: '.formatRowEditable'
-                                }"
-                            />
+                                }"/>
                             <Button
                                 icon="sap-icon://delete"
                                 press=".onDeleteResourceBtnPress"
@@ -359,8 +303,7 @@
                                 enabled="{
                                     parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
                                     formatter: '.formatRowEditable'
-                                }"
-                            />
+                                }"/>
                             <!-- <Button
                                 icon="{path:'viewModel>InActive', formatter:'.formatActiveBtn'}"
                                 press=".onPauseBtnPress"
@@ -387,30 +330,23 @@
             </Table>
         </f:content>
         <f:footer>
-            <Toolbar
-                id="idMassOpAsmtFooter"
-                visible="{viewModel>/isFiltersApplied}"
-            >
-                <Button
+            <Toolbar id="idMassOpAsmtFooter" visible="{viewModel>/isFiltersApplied}" >
+                <Button 
                     text="Save"
                     type="Emphasized"
-                    press=".onSavePress"
-                />
+                    press=".onSavePress"/>
                 <Button
                     text="Cancel"
-                    press=".onCancelAssignmentsPress"
-                />
+                    press=".onCancelAssignmentsPress" />
                 <ToolbarSpacer />
                 <Button
                     text="Assign"
                     type="Accept"
-                    press=".onSaveAssignmentsPress"
-                />
+                    press=".onSaveAssignmentsPress" />
                  <Button
                     type="Reject"
                     text="Revoke"
-                    press=".onRevokeResouceBtnPress"
-                />
+                    press=".onRevokeResouceBtnPress" />
             </Toolbar>
         </f:footer>
     </f:DynamicPage>

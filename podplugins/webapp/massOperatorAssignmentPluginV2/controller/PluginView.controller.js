@@ -6,11 +6,12 @@ sap.ui.define(
     'sap/m/MessageBox',
     '../util/ErrorHandler',
     '../util/formatter',
+    'arun/ext/podplugins/massOperatorAssignmentPluginV2/controller/BatchVHUtils'
   ],
-  function (JSONModel, PluginViewController, Log, MessageBox, ErrorHandler, formatter) {
+  function (JSONModel, PluginViewController, Log, MessageBox, ErrorHandler, formatter, BatchVHUtils) {
     'use strict';
 
-    var oLogger = Log.getLogger('massOperatorAssignmentPlugin', Log.Level.INFO);
+    var oLogger = Log.getLogger('massOperatorAssignmentPluginV2', Log.Level.INFO);
 
     var oPluginViewController = PluginViewController.extend('arun.ext.podplugins.massOperatorAssignmentPluginV2.controller.PluginView', {
       metadata: {
@@ -18,6 +19,7 @@ sap.ui.define(
       },
 
       formatter: formatter,
+      BatchVHUtils: BatchVHUtils,
 
       onInit: function () {
         if (PluginViewController.prototype.onInit) {
@@ -59,6 +61,8 @@ sap.ui.define(
         this.getView().setModel(new JSONModel({}), 'orderData');
         this.getView().setModel(new JSONModel([]), 'recipeData');
         this.getView().setModel(new JSONModel([]), 'grModel');
+
+        BatchVHUtils.setParentController(this);
       },
 
       onBeforeRenderingPlugin: async function () {
@@ -213,6 +217,7 @@ sap.ui.define(
               operator: oItem.operator,
               workcenter: oItem.workCenter,
               componentSequence: oItem.sequence,
+              batch: oItem.batchNumber,
             };
           });
 
@@ -238,6 +243,18 @@ sap.ui.define(
           sap.m.MessageToast.show(this.getI18nText('nonBomRelevantItemSelectErrMsg'));
           return;
         }
+      },
+
+      onBatchValueHelpRequest: function (oEvent) {
+        var oContext = oEvent.getSource().getBindingContext('viewModel');
+        BatchVHUtils.setSelectedComponentInfo(oContext);
+        BatchVHUtils.showValueHelpDialog();
+      },
+
+      updateBatchForComponent: function (sPath, sBatchNo) {
+        var oModel = this.getView().getModel('viewModel');
+        oModel.setProperty(`${sPath}/batchNumber`, sBatchNo);
+        oModel.refresh(true);
       },
 
       //TODO: Recheck
@@ -491,16 +508,20 @@ sap.ui.define(
             return;
           }
 
+          if (!oData.batchNumber) {
+            ErrorHandler.setErrorState(aCells[3], this.getI18nText('requiredFieldErrMsg'), 'value');
+          }
+
           if (!oData.resource) {
-            ErrorHandler.setErrorState(aCells[3], this.getI18nText('requiredFieldErrMsg'), 'selectedKey');
+            ErrorHandler.setErrorState(aCells[4], this.getI18nText('requiredFieldErrMsg'), 'selectedKey');
           }
 
           if (!oData.operator) {
-            ErrorHandler.setErrorState(aCells[6], this.getI18nText('requiredFieldErrMsg'));
+            ErrorHandler.setErrorState(aCells[7], this.getI18nText('requiredFieldErrMsg'));
           }
 
           if (oData.autoAcceptance && parseInt(oData.acceptanceDelay) < 1) {
-            ErrorHandler.setErrorState(aCells[7], this.getI18nText('inputPositiveNonZeroErrMsg'));
+            ErrorHandler.setErrorState(aCells[9], this.getI18nText('inputPositiveNonZeroErrMsg'));
           }
 
           //Check if the operator is unique in the table
@@ -509,7 +530,7 @@ sap.ui.define(
           );
           if (oOtherAssignment) {
             ErrorHandler.setErrorState(
-              aCells[6],
+              aCells[7],
               this.getI18nText('operatorAlreadyAssignedToComponentErrMsg', [
                 oData.operator,
                 oOtherAssignment.component,
@@ -522,7 +543,7 @@ sap.ui.define(
           var oCurrAsmt = oData.currentResourceAssignment;
           if (oCurrAsmt) {
             ErrorHandler.setErrorState(
-              oItem.getCells()[4],
+              oItem.getCells()[5],
               this.getI18nText('resorceAltAssmt.assignedToOtherOrderErrMsg', [oCurrAsmt.component, oCurrAsmt.order]),
               'selectedKey'
             );
@@ -1113,6 +1134,8 @@ sap.ui.define(
               COMPONENT: component.bomComponent.material.material,
               COMPONENT_SEQUENCE: component.bomComponent.sequence,
               batchNumber: this.oBomComponentsMap[component.bomComponent.material.material].batchNumber || 'NA',
+              defaultStorageLoc: this.oBomComponentsMap[component.bomComponent.material.material].storageLocation || '',
+              quantity: component.quantity,
             }))
           )
         );
@@ -1255,6 +1278,7 @@ sap.ui.define(
         for (var oItem of aLineItems) {
           var oMaterialDetail = this.materialsList[oItem.component];
           oItem.componentDesc = oMaterialDetail ? oMaterialDetail.description : '';
+          oItem.materialRef = oMaterialDetail ? oMaterialDetail.ref : '';
           // oItem.isBatchManaged = true;
         }
         this.getView().getModel('viewModel').setProperty('/lineItems', aLineItems);
@@ -1294,6 +1318,7 @@ sap.ui.define(
           InBOMVersion: this.selectedOrder.bom.version,
           InCorrectionTime: oItem.correctionTime,
           InSeatNumber: oItem.InSeatNumber,
+          InBatch: oItem.batchNumber,
         };
 
         return new Promise((resolve, reject) => this.ajaxPostRequest(sUrl, oPayload, resolve, reject));
