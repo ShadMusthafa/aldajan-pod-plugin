@@ -5,7 +5,7 @@ sap.ui.define(
     'sap/m/MessageBox',
     'sap/ui/model/Sorter',
     'sap/ui/model/Filter',
-    'sap/ui/model/FilterOperator'
+    'sap/ui/model/FilterOperator',
   ],
   function (JSONModel, Fragment, MessageBox, Sorter, Filter, FilterOperator) {
     'use strict';
@@ -107,7 +107,7 @@ sap.ui.define(
         return Fragment.load({
           id: this.getParentController().getView().getId(),
           name: 'arun.ext.podplugins.massOperatorAssignmentPluginV2.view.fragments.BatchValueHelpDialog',
-          controller: this
+          controller: this,
         }).then((oDialog) => {
           oDialog.setModel(this.batchModel);
           return oDialog;
@@ -146,17 +146,13 @@ sap.ui.define(
           });
 
           var sDefaultSloc = this.batchModel.getProperty('/componentInfo/defaultStorageLoc');
-          var aFilteredData = aData.filter(
-            (oItem) => oItem.storageLocation.storageLocation === sDefaultSloc && oItem.qaStatus !== 'Q'
-          );
+          var aFilteredData = aData.filter((oItem) => oItem.storageLocation.storageLocation === sDefaultSloc && oItem.qaStatus !== 'Q');
 
           this.batchModel.setProperty('/batchList', aFilteredData);
           this.batchModel.refresh(true);
 
           var oTable = this.getParentController().getView().byId('idBatchVHD-batchList');
-          oTable
-            .getBinding('items')
-            .sort([new Sorter('batch/shelfLifeExpirationDate', false), new Sorter('remainingQuantity', true)]);
+          oTable.getBinding('items').sort([new Sorter('batch/shelfLifeExpirationDate', false), new Sorter('remainingQuantity', true)]);
         });
 
         this.pDialog.open();
@@ -212,7 +208,7 @@ sap.ui.define(
         var oParams = {
           materialRef: sMaterialRef,
           shopOrderRef: oSelectedOrder.orderRef,
-          emptyBatchNumberIgnored: true
+          emptyBatchNumberIgnored: true,
         };
 
         return new Promise((resolve, reject) => that.ajaxGetRequest(sUrl, oParams, resolve, reject));
@@ -225,7 +221,7 @@ sap.ui.define(
             that.getPublicApiRestDataSourceUri() +
             '/pe/api/v1/process/processDefinitions/start?key=REG_57bd9fbd-5f78-4ac0-ba6b-7577d0bf7a57&async=false';
         var oPayload = {
-          items: [{ huno: sHuNo }]
+          items: [{ huno: sHuNo }],
         };
         return new Promise((resolve, reject) => that.ajaxPostRequest(sUrl, oPayload, resolve, reject));
       },
@@ -267,7 +263,13 @@ sap.ui.define(
         if (oBatchValidationResult.isBatchValid) {
           that.updateBatchForComponent(sPath, sBatchNo);
         } else {
-          MessageBox.error(oBatchValidationResult.message);
+          switch (oBatchValidationResult.messageType) {
+            case 'Warning':
+              MessageBox.warning(oBatchValidationResult.message);
+              break;
+            default:
+              MessageBox.error(oBatchValidationResult.message);
+          }
         }
       },
 
@@ -285,14 +287,14 @@ sap.ui.define(
         if (!oSelectedBatch) {
           return {
             isBatchValid: false,
-            message: 'Batch number is not valid'
+            message: 'Batch number is not valid',
           };
         }
 
         if (!oSelectedBatch.batch.shelfLifeExpirationDate) {
           return {
             isBatchValid: false,
-            message: 'Batch does not have expiry date'
+            message: 'Batch does not have expiry date',
           };
         }
 
@@ -301,18 +303,18 @@ sap.ui.define(
           sMessage = this.getParentController().getI18nText('batchNotInDefaultSlocErrMsg', [sBatchNo, sDefaultSloc]);
           return {
             isBatchValid: false,
-            message: sMessage
+            message: sMessage,
           };
         }
 
         if (fConsumptionQty > oSelectedBatch.remainingQuantity) {
           sMessage = this.getParentController().getI18nText('batchDoesNotContainRequiredStockErrMsg', [
             oSelectedBatch.batchNumber,
-            fConsumptionQty
+            fConsumptionQty,
           ]);
           return {
             isBatchValid: false,
-            message: sMessage
+            message: sMessage,
           };
         }
 
@@ -322,26 +324,22 @@ sap.ui.define(
         );
         var aDates = aFilteredBatches.map((oBatch) => new Date(oBatch.batch.shelfLifeExpirationDate));
         var oLowestExpDate = new Date(Math.min(...aDates));
-        var oLowestExpBatch = aFilteredBatches.find((oBatch) =>
-          moment(oBatch.batch.shelfLifeExpirationDate).isSame(oLowestExpDate)
-        );
+        var oLowestExpBatch = aFilteredBatches.find((oBatch) => moment(oBatch.batch.shelfLifeExpirationDate).isSame(oLowestExpDate));
 
         if (!moment(oLowestExpDate).isSame(oSelectedBatch.batch.shelfLifeExpirationDate)) {
-          sMessage = this.getParentController().getI18nText('errorLowerBatchExpiry', [
-            sMaterial,
-            oLowestExpBatch.batchNumber
-          ]);
+          sMessage = this.getParentController().getI18nText('errorLowerBatchExpiry', [sMaterial, oLowestExpBatch.batchNumber]);
           return {
             isBatchValid: false,
-            message: sMessage
+            messageType: 'Warning',
+            message: sMessage,
           };
         }
 
         return {
           isBatchValid: true,
-          message: ''
+          message: '',
         };
-      }
+      },
     };
   }
 );

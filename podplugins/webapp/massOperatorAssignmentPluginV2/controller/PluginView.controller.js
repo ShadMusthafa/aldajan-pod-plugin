@@ -6,7 +6,7 @@ sap.ui.define(
     'sap/m/MessageBox',
     '../util/ErrorHandler',
     '../util/formatter',
-    'arun/ext/podplugins/massOperatorAssignmentPluginV2/controller/BatchVHUtils'
+    'arun/ext/podplugins/massOperatorAssignmentPluginV2/controller/BatchVHUtils',
   ],
   function (JSONModel, PluginViewController, Log, MessageBox, ErrorHandler, formatter, BatchVHUtils) {
     'use strict';
@@ -674,6 +674,7 @@ sap.ui.define(
           acceptanceDelay: 1,
           correctionTime: 3000,
           lastModified: '',
+          batchNumber: '',
         });
 
         // Update the model with the cleared data for the selected row
@@ -1133,7 +1134,7 @@ sap.ui.define(
               WORK_CENTER: phase.workCenter,
               COMPONENT: component.bomComponent.material.material,
               COMPONENT_SEQUENCE: component.bomComponent.sequence,
-              batchNumber: this.oBomComponentsMap[component.bomComponent.material.material].batchNumber || 'NA',
+              batchNumber: this.oBomComponentsMap[component.bomComponent.material.material].batchNumber || '',
               defaultStorageLoc: this.oBomComponentsMap[component.bomComponent.material.material].storageLocation || '',
               quantity: component.quantity,
             }))
@@ -1210,6 +1211,7 @@ sap.ui.define(
               resourceType: '',
               resourceLastModifiedAt: '',
               asset: '',
+              batchNumber: oAssmt.BATCH_NO
             };
           } else {
             //Not matched scenario - Not BOM Relevant
@@ -1239,6 +1241,8 @@ sap.ui.define(
               phaseId: '',
               resourceList: this.resourceList,
               sequence: oAssmt.COMPONENT_SEQUENCE,
+
+              batchNumber: ''
             };
           }
           var oResource = this._getDetailsForResource(oAssmt.RESOURCE);

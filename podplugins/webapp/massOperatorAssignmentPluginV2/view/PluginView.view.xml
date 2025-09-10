@@ -224,7 +224,7 @@
                         <Input
                             showSuggestion="true"
                             suggestionItems="{viewModel>userAssignments}"
-                           enabled="{
+                        enabled="{
                                 parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
                                 formatter: '.formatRowEditable'
                             }"
@@ -271,7 +271,7 @@
                             value="{
                                 path: 'viewModel>correctionTime',
                                 type: 'sap.ui.model.type.Integer'
-                               
+                            
                             }"
                             editable="{= ${viewModel>autoAcceptance} &amp;&amp; ${viewModel>isNew}}"
                             change=".onCorrectionTimeInputChange" />

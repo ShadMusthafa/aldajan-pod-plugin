@@ -1,30 +1,45 @@
 <core:FragmentDefinition
     xmlns:core='sap.ui.core'
     xmlns:f='sap.ui.layout.form'
+    xmlns:fb="sap.ui.comp.filterbar"
     xmlns='sap.m'>
     <Dialog id='idBatchVHD' title="Select Batch" resizable="true" stretch="true">
         <content>
-            <IconTabBar id='idBatchVHD-ITB' 
+            <!-- <IconTabBar id='idBatchVHD-ITB' 
                 class="sapUiResponsiveContentPadding">
-                <items>
-                    <IconTabFilter key="scan" text="Scan">
-                        <f:SimpleForm id="idBatchVHD-scanForm"
+                <items> -->
+                    <!-- <IconTabFilter key="scan" text="Scan"> -->
+                        <!-- <f:SimpleForm id="idBatchVHD-scanForm"
                             editable="true"
                             layout="ResponsiveGridLayout">
                             <Label text="Handling Unit"/>
                             <Input id="idHuScanInput" change=".handleHUScan"/>
                             <Label text="Article"/>
                             <Input id="idArticleScanInput" change=".handleArticleScan"/>
-                        </f:SimpleForm>
-                    </IconTabFilter>
-                    <IconTabFilter key="List" text="List">
+                        </f:SimpleForm> -->
+                    <!-- </IconTabFilter> -->
+                    <!-- <IconTabFilter key="List" text="List"> -->
+                        <fb:FilterBar id="filterbar" useToolbar="true" showClearButton="false" showRestoreButton="false" showGoOnFB="false">
+							<fb:filterGroupItems>
+								<fb:FilterGroupItem name="HandlingUnit" label="Handling Unit" groupName="Group1" visibleInFilterBar="true">
+									<fb:control>
+										<Input id="idHuScanInput" change=".handleHUScan"/>
+									</fb:control>
+								</fb:FilterGroupItem>
+								<fb:FilterGroupItem name="Article" label="Article" groupName="Group1" visibleInFilterBar="true">
+									<fb:control>
+										<Input id="idArticleScanInput" change=".handleArticleScan"/>
+									</fb:control>
+								</fb:FilterGroupItem>
+							</fb:filterGroupItems>
+						</fb:FilterBar>
                         <Table id='idBatchVHD-batchList' items="{/batchList}">
                             <columns>
                                 <Column><Label text="Batch"/></Column>
                                 <Column><Label text="Storage Location"/></Column>
                                 <Column><Label text="Storage Location Desc"/></Column>
                                 <Column><Label text="Quantity"/></Column>
-                                <Column><Label text="Shelf Life Expiration"/></Column>
+                                <!-- <Column><Label text="Shelf Life Expiration"/></Column> -->
                                 <Column><Label text="QA Status"/></Column>
                                 <Column><Label text="Expiry Date"/></Column>
                             </columns>
@@ -34,15 +49,15 @@
                                     <Text text="{storageLocation/storageLocation}"/>
                                     <Text text="{storageLocation/description}"/>
                                     <ObjectNumber number="{remainingQuantity}" unit="{unitOfMeasure/uom}"/>
-                                    <Text text="{path: 'bestBeforeDate', formatter: '.dateFormatter'}"/>
+                                    <!-- <Text text="{path: 'bestBeforeDate', formatter: '.dateFormatter'}"/> -->
                                     <Text text="{qaStatus}"/>
                                     <Text text="{path: 'batch/shelfLifeExpirationDate', formatter: '.dateFormatter'}"/>
                                 </ColumnListItem>
                             </items>
                         </Table>
-                    </IconTabFilter>
+                    <!-- </IconTabFilter>
                 </items>
-            </IconTabBar>
+            </IconTabBar> -->
         </content>
         <endButton>
             <Button text="Close" press=".onCloseVHDia"/>
