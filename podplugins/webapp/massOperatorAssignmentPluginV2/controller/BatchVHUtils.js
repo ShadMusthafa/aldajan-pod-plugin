@@ -265,7 +265,11 @@ sap.ui.define(
         } else {
           switch (oBatchValidationResult.messageType) {
             case 'Warning':
-              MessageBox.warning(oBatchValidationResult.message);
+              MessageBox.warning(oBatchValidationResult.message, {
+                onClose: function () {
+                  that.updateBatchForComponent(sPath, sBatchNo);
+                },
+              });
               break;
             default:
               MessageBox.error(oBatchValidationResult.message);
@@ -307,17 +311,6 @@ sap.ui.define(
           };
         }
 
-        if (fConsumptionQty > oSelectedBatch.remainingQuantity) {
-          sMessage = this.getParentController().getI18nText('batchDoesNotContainRequiredStockErrMsg', [
-            oSelectedBatch.batchNumber,
-            fConsumptionQty,
-          ]);
-          return {
-            isBatchValid: false,
-            message: sMessage,
-          };
-        }
-
         //Check if the selected batch has lowest expiry in the batch list
         var aFilteredBatches = aBatches.filter(
           (oBatch) => !!oBatch.batch.shelfLifeExpirationDate && oBatch.storageLocation.storageLocation === sDefaultSloc
@@ -328,6 +321,17 @@ sap.ui.define(
 
         if (!moment(oLowestExpDate).isSame(oSelectedBatch.batch.shelfLifeExpirationDate)) {
           sMessage = this.getParentController().getI18nText('errorLowerBatchExpiry', [sMaterial, oLowestExpBatch.batchNumber]);
+          return {
+            isBatchValid: false,
+            message: sMessage,
+          };
+        }
+
+        if (fConsumptionQty > oSelectedBatch.remainingQuantity) {
+          sMessage = this.getParentController().getI18nText('batchDoesNotContainRequiredStockErrMsg', [
+            oSelectedBatch.batchNumber,
+            fConsumptionQty,
+          ]);
           return {
             isBatchValid: false,
             messageType: 'Warning',

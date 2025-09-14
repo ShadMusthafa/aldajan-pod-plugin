@@ -280,7 +280,7 @@
                                 path: 'viewModel>lastModified',
                                 formatter: '.dateTimeFormatter'
                             }" />
-                        <HBox>
+                        <VBox>
                             <Button
                                 text="Add"
                                 press=".onAddResouceBtnPress"
@@ -324,7 +324,7 @@
                                     <FlexItemData growFactor="1" />
                                 </layoutData>
                             </Switch>
-                        </HBox>
+                        </VBox>
                     </ColumnListItem>
                 </items>
             </Table>

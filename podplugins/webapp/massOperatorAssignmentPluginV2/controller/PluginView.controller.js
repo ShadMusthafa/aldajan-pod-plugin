@@ -803,7 +803,7 @@ sap.ui.define(
           });
 
           oOrderData.sfcs = aSFCs;
-          this.selectedSFC = aSFCs[0].sfc;
+          // this.selectedSFC = aSFCs[0].sfc;
 
           var oWorkCenters = oOrderData.workCenters.reduce((acc, val) => {
             acc[val.workCenter] = val;
@@ -1211,7 +1211,7 @@ sap.ui.define(
               resourceType: '',
               resourceLastModifiedAt: '',
               asset: '',
-              batchNumber: oAssmt.BATCH_NO
+              batchNumber: oAssmt.BATCH_NO,
             };
           } else {
             //Not matched scenario - Not BOM Relevant
@@ -1242,7 +1242,7 @@ sap.ui.define(
               resourceList: this.resourceList,
               sequence: oAssmt.COMPONENT_SEQUENCE,
 
-              batchNumber: ''
+              batchNumber: '',
             };
           }
           var oResource = this._getDetailsForResource(oAssmt.RESOURCE);
