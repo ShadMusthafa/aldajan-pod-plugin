@@ -199,7 +199,8 @@ sap.ui.define(
           oViewModel = oView.getModel('viewModel'),
           aLineItems = oViewModel.getProperty('/lineItems'),
           oOrderModel = oView.getModel('orderData'),
-          oOrderData = oOrderModel.getProperty('/');
+          oOrderData = oOrderModel.getProperty('/'),
+          oSelectedOrder = this.getPodSelectionModel().selectedOrderData;
 
         //Do not save non bom relevant items
         var aPayload = aLineItems
@@ -218,6 +219,7 @@ sap.ui.define(
               workcenter: oItem.workCenter,
               componentSequence: oItem.sequence,
               batch: oItem.batchNumber,
+              sfc: oSelectedOrder.sfc
             };
           });
 
@@ -520,9 +522,9 @@ sap.ui.define(
             ErrorHandler.setErrorState(aCells[7], this.getI18nText('requiredFieldErrMsg'));
           }
 
-          if (oData.autoAcceptance && parseInt(oData.acceptanceDelay) < 1) {
-            ErrorHandler.setErrorState(aCells[9], this.getI18nText('inputPositiveNonZeroErrMsg'));
-          }
+          // if (oData.autoAcceptance && parseInt(oData.acceptanceDelay) < 1) {
+          //   ErrorHandler.setErrorState(aCells[9], this.getI18nText('inputPositiveNonZeroErrMsg'));
+          // }
 
           //Check if the operator is unique in the table
           var oOtherAssignment = aLineItems.find(
@@ -953,10 +955,12 @@ sap.ui.define(
       _getAssignmentDataHANADB: function () {
         var sUrl = 'https://dbapicall.cfapps.eu20-001.hana.ondemand.com/api/get/assignmentDetails';
         var orderData = this.getView().getModel('orderData').getData();
+        var oSelectedOrder = this.getPodSelectionModel().selectedOrderData;
         // var oViewData = this.getView().getModel('viewModel').getData().lineItems1[0];
         var oPayload = {
           plant: orderData.plant,
           material: orderData.material.material,
+          // sfc: oSelectedOrder.sfc  //Optional to get assignments specific to the workcenter
           // workcenter: oViewData.workCenter
         };
 
@@ -1212,6 +1216,7 @@ sap.ui.define(
               resourceLastModifiedAt: '',
               asset: '',
               batchNumber: oAssmt.BATCH_NO,
+              // batchNumber: ''
             };
           } else {
             //Not matched scenario - Not BOM Relevant
@@ -1291,11 +1296,9 @@ sap.ui.define(
       },
 
       _assignResource: function (oItem) {
-        //AD_MT_HANDSHAKE_imported - CPP_assignOperator
-        // var sUrl = this.PPD_BASE_URL + 'key=REG_e64981d3-2a78-4751-8e86-f796485f1db5&async=false';
-        //AD_MT_HANDSHAKE_CURRENT - CPP_assignOperator
-        // var sUrl = this.PPD_BASE_URL + 'key=REG_2f6052ea-915e-4f89-9e23-40b261aa40f7&async=false';
-        //P_AD_MT_HANDSHAKE_CURRENT_V3_CPP_assignOperator -> /pe/api/v1/process/processDefinitions/start?key=REG_16f252e3-5f2b-4800-a13e-4f3b9b2375b4
+        //AD_MT_HANDSHAKE_imported - CPP_assignOperator -> REG_e64981d3-2a78-4751-8e86-f796485f1db5
+        //AD_MT_HANDSHAKE_CURRENT - CPP_assignOperator -> REG_2f6052ea-915e-4f89-9e23-40b261aa40f7
+        //P_AD_MT_HANDSHAKE_CURRENT_V3_CPP_assignOperator -> REG_16f252e3-5f2b-4800-a13e-4f3b9b2375b4
         var sUrl = this.PPD_BASE_URL + 'key=REG_16f252e3-5f2b-4800-a13e-4f3b9b2375b4&async=false';
 
         var oPayload = {
@@ -1393,6 +1396,7 @@ sap.ui.define(
 
           var oResourceAssignment = await this._getResourceOccupancy(oItem.resource).catch((oError) => {
             oItem.isNew = true;
+            oItem.batchNumber = '';
             console.error(oError);
             return;
           });
@@ -1404,6 +1408,7 @@ sap.ui.define(
           if (oResourceAssignment && oResourceAssignment['State_Signal'] === 0) {
             oItem.isNew = true;
             oItem.currentResourceAssignment = null;
+            oItem.batchNumber = '';
             // return oItem;
           } else if (
             oResCustomData.OPERATOR === oItem.operator &&
@@ -1415,6 +1420,7 @@ sap.ui.define(
           } else {
             //If the assignment is for a different order, component or operator,
             oItem.isNew = true;
+            oItem.batchNumber = '';
             oItem.currentResourceAssignment = {
               order: oResCustomData.ORDER,
               component: oResCustomData.MATERIAL,

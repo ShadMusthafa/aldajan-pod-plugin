@@ -109,7 +109,7 @@
                                 </HBox>
                             </filterbar:control>
                         </filterbar:FilterGroupItem>
-                        <filterbar:FilterGroupItem
+                        <!-- <filterbar:FilterGroupItem
                             id="idMaterialgoodsReceiptQuantity"
                             name="MaterialgoodsReceiptQuantity"
                             label="Goods Receipt Quantity"
@@ -118,10 +118,6 @@
                         >
                             <filterbar:control>
                                 <HBox>
-                                    <!-- <Text
-                                        id="goodsReceiptQuantity"
-                                        text="{orderData>/goodsReceiptQuantity}"
-                                    /> -->
                                     <ProgressIndicator id="GRQuantity" 
                                         percentValue="{
                                             parts : [ 'grModel>/targetQuantity', 'grModel>/receivedQuantity' ], 
@@ -136,7 +132,7 @@
                                         class="sapOrderCardQuantity"/>
                                 </HBox>
                             </filterbar:control>
-                        </filterbar:FilterGroupItem>
+                        </filterbar:FilterGroupItem> -->
                     </filterbar:filterGroupItems>
                 </filterbar:FilterBar>
             </f:DynamicPageHeader>
@@ -176,13 +172,13 @@
                     <Column width="4rem"><Label design="Bold" wrapping="true" text="Phase Id" /></Column>
                     <Column><Label design="Bold" wrapping="true" text="Component" /></Column>
                     <Column><Label design="Bold" wrapping="true" text="Batch" /></Column>
-                    <Column><Label design="Bold" wrapping="true" text="Seat Number" /></Column>
+                    <Column width="5rem"><Label design="Bold" wrapping="true" text="Seat Number" /></Column>
                     <Column><Label design="Bold" wrapping="true" text="Asset / Resource" /></Column>
                     <Column><Label design="Bold" wrapping="true" text="Resource Type" /></Column>
                     <Column><Label design="Bold" wrapping="true" text="Operator" /></Column>
-                    <Column><Label design="Bold" wrapping="true" text="Acceptance Type" /></Column>
-                    <Column><Label design="Bold" wrapping="true" text="Acceptance Delay" /></Column>
-                    <Column><Label design="Bold" wrapping="true" text="Correction Time" /></Column>
+                    <!-- <Column><Label design="Bold" wrapping="true" text="Acceptance Type" /></Column>
+                    <Column><Label design="Bold" wrapping="true" text="Acceptance Delay" /></Column> -->
+                    <Column width="6rem"><Label design="Bold" wrapping="true" text="Correction Time" /></Column>
                     <Column><Label design="Bold" wrapping="true" text="Last Modified" /></Column>
                     <Column><Label design="Bold" wrapping="true" text="Actions" /></Column>
                 </columns>  
@@ -195,6 +191,7 @@
                             value="{viewModel>batchNumber}"
                             showValueHelp="true"
                             valueHelpRequest=".onBatchValueHelpRequest"
+                            valueHelpOnly="true"
                             enabled="{
                                 parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
                                 formatter: '.formatRowEditable'
@@ -236,7 +233,7 @@
                                     text="{viewModel>userId}" />
                             </suggestionItems>
                         </Input>
-                        <SegmentedButton
+                        <!-- <SegmentedButton
                             selectionChange=".onAutoAcceptanceModeChange"
                             enabled="{
                                 parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
@@ -262,7 +259,7 @@
                                 
                             }"
                             editable="{= ${viewModel>autoAcceptance} &amp;&amp; ${viewModel>isNew}}"
-                            change=".onAutoAcceptanceDelayChange"/>
+                            change=".onAutoAcceptanceDelayChange"/> -->
                         <Input
                             enabled="{
                                 parts:['viewModel>isNew', 'viewModel>isUnitValid', 'viewModel>isBomRelevant'],
