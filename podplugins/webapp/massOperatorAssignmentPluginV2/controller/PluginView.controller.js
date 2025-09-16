@@ -586,6 +586,7 @@ sap.ui.define(
               //Clear any current assignment when resource is revoked
               var oData = oViewModel.getProperty(oItem.path);
               oData.currentResourceAssignment = null;
+              oData.batchNumber = '';
               oViewModel.setProperty(oItem.path, oData);
             }.bind(this)
           );
