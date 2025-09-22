@@ -119,6 +119,9 @@ sap.ui.define(
           this.pDialog = await this.getValueHelpDialog();
         }
 
+        this.pDialog.setBusyIndicatorDelay(0);
+        this.pDialog.setBusy(true);
+
         this._getBatchListForComponent().then((oResponse) => {
           // this.batchModel.setProperty('/batchList', oResponse.content);
           var aData = oResponse;
@@ -153,6 +156,8 @@ sap.ui.define(
 
           var oTable = this.getParentController().getView().byId('idBatchVHD-batchList');
           oTable.getBinding('items').sort([new Sorter('batch/shelfLifeExpirationDate', false), new Sorter('remainingQuantity', true)]);
+        }).finally(()=>{
+          this.pDialog.setBusy(false);
         });
 
         this.pDialog.open();
